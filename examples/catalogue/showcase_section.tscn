@@ -1,0 +1,23 @@
+[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://rookframe/ui/menu/MenuSurface.tscn" id="surface"]
+
+; Each component family is a Structure-framed section in the showcase stack.
+; Add its heading and samples under Inset/Content.
+[node name="ShowcaseSection" type="MarginContainer"]
+size_flags_horizontal = 3
+
+[node name="Background" parent="." instance=ExtResource("surface")]
+layout_mode = 2
+theme_type_variation = &"menu_structure"
+
+[node name="Inset" type="MarginContainer" parent="."]
+layout_mode = 2
+theme_override_constants/margin_left = 24
+theme_override_constants/margin_right = 24
+theme_override_constants/margin_top = 24
+theme_override_constants/margin_bottom = 24
+
+[node name="Content" type="VBoxContainer" parent="Inset"]
+layout_mode = 2
+theme_override_constants/separation = 16

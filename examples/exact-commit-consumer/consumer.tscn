@@ -1,0 +1,110 @@
+[gd_scene load_steps=5 format=3 uid="uid://dyrvqc2ip2we6"]
+
+[ext_resource type="Theme" path="res://rookframe/ui/theme/rookframe_theme.tres" id="1_theme"]
+[ext_resource type="Texture2D" path="res://rookframe/ui/icons/check.svg" id="2_check"]
+[ext_resource type="PackedScene" uid="uid://jhuolgtvtefyi" path="res://rookframe/ui/components/forms/search_field.tscn" id="3_search"]
+[ext_resource type="Script" path="res://consumer.gd" id="4_consumer"]
+
+[node name="ExactCommitConsumer" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("1_theme")
+script = ExtResource("4_consumer")
+
+[node name="Canvas" type="PanelContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_type_variation = &"RookframeCanvas"
+
+[node name="Margin" type="MarginContainer" parent="Canvas"]
+layout_mode = 2
+theme_override_constants/margin_left = 48
+theme_override_constants/margin_top = 48
+theme_override_constants/margin_right = 48
+theme_override_constants/margin_bottom = 48
+
+[node name="Surface" type="PanelContainer" parent="Canvas/Margin"]
+layout_mode = 2
+theme_type_variation = &"RookframeSection"
+
+[node name="Content" type="VBoxContainer" parent="Canvas/Margin/Surface"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="Title" type="Label" parent="Canvas/Margin/Surface/Content"]
+layout_mode = 2
+theme_type_variation = &"RookframeTitle"
+text = "Exact-commit consumer"
+
+[node name="Body" type="Label" parent="Canvas/Margin/Surface/Content"]
+layout_mode = 2
+theme_type_variation = &"RookframeBody"
+text = "This normal Godot project loaded the public Theme and assets copied by gd-plug."
+autowrap_mode = 2
+
+[node name="Name" type="LineEdit" parent="Canvas/Margin/Surface/Content"]
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+placeholder_text = "Ordinary native LineEdit"
+
+[node name="Choice" type="CheckBox" parent="Canvas/Margin/Surface/Content"]
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+text = "Ordinary native CheckBox"
+button_pressed = true
+
+[node name="Search" parent="Canvas/Margin/Surface/Content" instance=ExtResource("3_search")]
+layout_mode = 2
+show_label = false
+placeholder = "Public Search Field instance"
+
+[node name="Actions" type="HBoxContainer" parent="Canvas/Margin/Surface/Content"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Primary" type="Button" parent="Canvas/Margin/Surface/Content/Actions"]
+custom_minimum_size = Vector2(0, 52)
+layout_mode = 2
+theme_type_variation = &"RookframePrimaryButton"
+text = "Continue"
+
+[node name="Secondary" type="Button" parent="Canvas/Margin/Surface/Content/Actions"]
+custom_minimum_size = Vector2(0, 52)
+layout_mode = 2
+theme_type_variation = &"RookframeSecondaryButton"
+text = "Inspect"
+
+[node name="Progress" type="ProgressBar" parent="Canvas/Margin/Surface/Content"]
+custom_minimum_size = Vector2(0, 20)
+layout_mode = 2
+value = 100.0
+show_percentage = false
+
+[node name="Ready" type="HBoxContainer" parent="Canvas/Margin/Surface/Content"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Icon" type="TextureRect" parent="Canvas/Margin/Surface/Content/Ready"]
+custom_minimum_size = Vector2(24, 24)
+layout_mode = 2
+texture = ExtResource("2_check")
+modulate = Color(0.490196, 0.85098, 0.537255, 1)
+expand_mode = 1
+stretch_mode = 5
+
+[node name="ProofStatus" type="Label" parent="Canvas/Margin/Surface/Content/Ready"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"RookframeSuccess"
+text = "Pinned source materialized successfully"
+
+[connection signal="cleared" from="Canvas/Margin/Surface/Content/Search" to="." method="_on_search_cleared"]
+[connection signal="value_changed" from="Canvas/Margin/Surface/Content/Search" to="." method="_on_search_value_changed"]

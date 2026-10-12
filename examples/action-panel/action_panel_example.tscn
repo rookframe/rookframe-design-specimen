@@ -1,0 +1,102 @@
+[gd_scene format=3]
+[ext_resource type="Script" path="res://examples/action-panel/action_panel_example.gd" id="example"]
+[ext_resource type="PackedScene" path="res://rookframe/ui/components/surfaces/action_panel/action_panel.tscn" id="panel"]
+[ext_resource type="PackedScene" path="res://rookframe/ui/components/surfaces/action_panel/action_section.tscn" id="section"]
+[ext_resource type="Theme" path="res://rookframe/ui/theme/silkbound_theme.tres" id="theme"]
+[ext_resource type="Texture2D" path="res://rookframe/ui/icons/dice.svg" id="icon"]
+
+[node name="ActionPanelExample" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("theme")
+script = ExtResource("example")
+[node name="Margin" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+theme_override_constants/margin_left = 32
+theme_override_constants/margin_right = 32
+theme_override_constants/margin_top = 32
+theme_override_constants/margin_bottom = 32
+[node name="Content" type="VBoxContainer" parent="Margin"]
+layout_mode = 2
+theme_override_constants/separation = 20
+[node name="Controls" type="HBoxContainer" parent="Margin/Content"]
+layout_mode = 2
+[node name="AddSection" type="Button" parent="Margin/Content/Controls"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Add section"
+[node name="RemoveSection" type="Button" parent="Margin/Content/Controls"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Remove section"
+disabled = true
+[node name="Compact" type="CheckButton" parent="Margin/Content/Controls"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Compact"
+[node name="Footer" type="CheckButton" parent="Margin/Content/Controls"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Footer"
+button_pressed = true
+[node name="Scroll" type="ScrollContainer" parent="Margin/Content"]
+layout_mode = 2
+size_flags_vertical = 3
+[node name="Panel" parent="Margin/Content/Scroll" instance=ExtResource("panel")]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(520, 0)
+layout_mode = 2
+size_flags_horizontal = 0
+size_flags_vertical = 0
+[node name="Title" type="Label" parent="Margin/Content/Scroll/Panel/Header/Leaf/HeaderSlot"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "System-authored action"
+theme_override_font_sizes/font_size = 26
+[node name="Detail" type="Label" parent="Margin/Content/Scroll/Panel/Header/Leaf/HeaderSlot"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "An authored header and growing sections"
+autowrap_mode = 2
+[node name="Icon" type="TextureRect" parent="Margin/Content/Scroll/Panel/Header/Emblem/Leaf/EmblemSlot"]
+layout_mode = 2
+custom_minimum_size = Vector2(32, 32)
+texture = ExtResource("icon")
+expand_mode = 1
+stretch_mode = 5
+[node name="Section" parent="Margin/Content/Scroll/Panel/Sections/SectionsSlot" instance=ExtResource("section")]
+layout_mode = 2
+[node name="Row" type="HBoxContainer" parent="Margin/Content/Scroll/Panel/Sections/SectionsSlot/Section"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 60)
+[node name="RollLabel" type="Label" parent="Margin/Content/Scroll/Panel/Sections/SectionsSlot/Section/Row"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Roll"
+size_flags_horizontal = 3
+[node name="Formula" type="Label" parent="Margin/Content/Scroll/Panel/Sections/SectionsSlot/Section/Row"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "1d20 + 2"
+theme_override_font_sizes/font_size = 28
+[node name="Roll" type="Button" parent="Margin/Content/Scroll/Panel/Sections/SectionsSlot/Section/Row"]
+layout_mode = 2
+custom_minimum_size = Vector2(56, 52)
+size_flags_vertical = 4
+theme_type_variation = &"RookframeActionRoll"
+accessibility_name = "Example roll"
+[node name="Target" type="Label" parent="Margin/Content/Scroll/Panel/Footer/Leaf/FooterSlot"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "An optional system-authored footer"
+autowrap_mode = 2
+
+[editable path="Margin/Content/Scroll/Panel"]
+[editable path="Margin/Content/Scroll/Panel/Sections/SectionsSlot/Section"]

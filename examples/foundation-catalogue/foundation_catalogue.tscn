@@ -1,0 +1,247 @@
+[gd_scene load_steps=7 format=3 uid="uid://nafihgur4ds1"]
+
+[ext_resource type="Theme" path="res://rookframe/ui/theme/rookframe_theme.tres" id="1_theme"]
+[ext_resource type="Texture2D" path="res://rookframe/ui/icons/search.svg" id="2_search"]
+[ext_resource type="Texture2D" path="res://rookframe/ui/icons/check.svg" id="3_check"]
+[ext_resource type="Texture2D" path="res://rookframe/ui/icons/warning.svg" id="4_warning"]
+[ext_resource type="Texture2D" path="res://rookframe/ui/icons/settings.svg" id="5_settings"]
+
+[sub_resource type="ButtonGroup" id="ButtonGroup_radio"]
+
+[node name="FoundationCatalogue" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("1_theme")
+
+[node name="Canvas" type="PanelContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_type_variation = &"RookframeCanvas"
+
+[node name="PageMargin" type="MarginContainer" parent="Canvas"]
+layout_mode = 2
+theme_override_constants/margin_left = 32
+theme_override_constants/margin_top = 24
+theme_override_constants/margin_right = 32
+theme_override_constants/margin_bottom = 24
+
+[node name="Columns" type="HBoxContainer" parent="Canvas/PageMargin"]
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="Foundation" type="PanelContainer" parent="Canvas/PageMargin/Columns"]
+custom_minimum_size = Vector2(680, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"RookframeManagedSurface"
+
+[node name="Content" type="VBoxContainer" parent="Canvas/PageMargin/Columns/Foundation"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="Eyebrow" type="Label" parent="Canvas/PageMargin/Columns/Foundation/Content"]
+layout_mode = 2
+theme_type_variation = &"RookframeHeading"
+text = "NATIVE-FIRST FOUNDATION"
+
+[node name="Title" type="Label" parent="Canvas/PageMargin/Columns/Foundation/Content"]
+layout_mode = 2
+theme_type_variation = &"RookframeTitle"
+text = "Rookframe UI Kit"
+
+[node name="Body" type="Label" parent="Canvas/PageMargin/Columns/Foundation/Content"]
+layout_mode = 2
+theme_type_variation = &"RookframeBody"
+text = "One shared Theme styles ordinary Godot Controls. Semantic variations express purpose without a parallel widget hierarchy."
+autowrap_mode = 2
+
+[node name="Rule" type="HSeparator" parent="Canvas/PageMargin/Columns/Foundation/Content"]
+layout_mode = 2
+
+[node name="ActionsHeading" type="Label" parent="Canvas/PageMargin/Columns/Foundation/Content"]
+layout_mode = 2
+theme_type_variation = &"RookframeHeading"
+text = "Action hierarchy"
+
+[node name="Actions" type="HBoxContainer" parent="Canvas/PageMargin/Columns/Foundation/Content"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Primary" type="Button" parent="Canvas/PageMargin/Columns/Foundation/Content/Actions"]
+custom_minimum_size = Vector2(0, 52)
+layout_mode = 2
+theme_type_variation = &"RookframePrimaryButton"
+text = "Continue"
+
+[node name="Secondary" type="Button" parent="Canvas/PageMargin/Columns/Foundation/Content/Actions"]
+custom_minimum_size = Vector2(0, 52)
+layout_mode = 2
+theme_type_variation = &"RookframeSecondaryButton"
+text = "Review"
+
+[node name="Quiet" type="Button" parent="Canvas/PageMargin/Columns/Foundation/Content/Actions"]
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+theme_type_variation = &"RookframeQuietButton"
+text = "Retry"
+
+[node name="Danger" type="Button" parent="Canvas/PageMargin/Columns/Foundation/Content/Actions"]
+custom_minimum_size = Vector2(0, 52)
+layout_mode = 2
+theme_type_variation = &"RookframeDangerButton"
+text = "Remove"
+
+[node name="Fields" type="GridContainer" parent="Canvas/PageMargin/Columns/Foundation/Content"]
+layout_mode = 2
+theme_override_constants/h_separation = 16
+theme_override_constants/v_separation = 8
+columns = 2
+
+[node name="NameLabel" type="Label" parent="Canvas/PageMargin/Columns/Foundation/Content/Fields"]
+layout_mode = 2
+theme_type_variation = &"RookframeLabel"
+text = "World name"
+
+[node name="Name" type="LineEdit" parent="Canvas/PageMargin/Columns/Foundation/Content/Fields"]
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+size_flags_horizontal = 3
+placeholder_text = "The Pale Keep"
+
+[node name="NotesLabel" type="Label" parent="Canvas/PageMargin/Columns/Foundation/Content/Fields"]
+layout_mode = 2
+theme_type_variation = &"RookframeLabel"
+text = "Notes"
+
+[node name="Notes" type="TextEdit" parent="Canvas/PageMargin/Columns/Foundation/Content/Fields"]
+custom_minimum_size = Vector2(0, 112)
+layout_mode = 2
+size_flags_horizontal = 3
+placeholder_text = "Long copy remains readable and adjacent to its label."
+wrap_mode = 1
+
+[node name="Choices" type="HBoxContainer" parent="Canvas/PageMargin/Columns/Foundation/Content"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="Checkbox" type="CheckBox" parent="Canvas/PageMargin/Columns/Foundation/Content/Choices"]
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+text = "Remember choice"
+button_pressed = true
+
+[node name="Radio" type="CheckBox" parent="Canvas/PageMargin/Columns/Foundation/Content/Choices"]
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+text = "Selected option"
+button_pressed = true
+button_group = SubResource("ButtonGroup_radio")
+
+[node name="Progress" type="ProgressBar" parent="Canvas/PageMargin/Columns/Foundation/Content"]
+custom_minimum_size = Vector2(0, 20)
+layout_mode = 2
+value = 62.0
+show_percentage = false
+
+[node name="Status" type="Label" parent="Canvas/PageMargin/Columns/Foundation/Content"]
+layout_mode = 2
+theme_type_variation = &"RookframeSuccess"
+text = "Ready — status uses text as well as color."
+
+[node name="SemanticAssets" type="PanelContainer" parent="Canvas/PageMargin/Columns"]
+custom_minimum_size = Vector2(360, 0)
+layout_mode = 2
+theme_type_variation = &"RookframeSection"
+
+[node name="Content" type="VBoxContainer" parent="Canvas/PageMargin/Columns/SemanticAssets"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="Heading" type="Label" parent="Canvas/PageMargin/Columns/SemanticAssets/Content"]
+layout_mode = 2
+theme_type_variation = &"RookframeHeading"
+text = "Semantic assets"
+
+[node name="Copy" type="Label" parent="Canvas/PageMargin/Columns/SemanticAssets/Content"]
+layout_mode = 2
+theme_type_variation = &"RookframeMeta"
+text = "Public paths name meanings, not consuming screens. The complete inventory controls later component work."
+autowrap_mode = 2
+
+[node name="Icons" type="HBoxContainer" parent="Canvas/PageMargin/Columns/SemanticAssets/Content"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="Search" type="TextureRect" parent="Canvas/PageMargin/Columns/SemanticAssets/Content/Icons"]
+custom_minimum_size = Vector2(28, 28)
+layout_mode = 2
+texture = ExtResource("2_search")
+modulate = Color(0.329412, 0.972549, 0.956863, 1)
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Check" type="TextureRect" parent="Canvas/PageMargin/Columns/SemanticAssets/Content/Icons"]
+custom_minimum_size = Vector2(28, 28)
+layout_mode = 2
+texture = ExtResource("3_check")
+modulate = Color(0.329412, 0.972549, 0.956863, 1)
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Warning" type="TextureRect" parent="Canvas/PageMargin/Columns/SemanticAssets/Content/Icons"]
+custom_minimum_size = Vector2(28, 28)
+layout_mode = 2
+texture = ExtResource("4_warning")
+modulate = Color(0.941176, 0.733333, 0.196078, 1)
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Settings" type="TextureRect" parent="Canvas/PageMargin/Columns/SemanticAssets/Content/Icons"]
+custom_minimum_size = Vector2(28, 28)
+layout_mode = 2
+texture = ExtResource("5_settings")
+modulate = Color(0.329412, 0.972549, 0.956863, 1)
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Notice" type="PanelContainer" parent="Canvas/PageMargin/Columns/SemanticAssets/Content"]
+layout_mode = 2
+theme_type_variation = &"RookframeNotice"
+
+[node name="NoticeCopy" type="VBoxContainer" parent="Canvas/PageMargin/Columns/SemanticAssets/Content/Notice"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="Title" type="Label" parent="Canvas/PageMargin/Columns/SemanticAssets/Content/Notice/NoticeCopy"]
+layout_mode = 2
+theme_type_variation = &"RookframeHeading"
+text = "Foundation slice"
+
+[node name="Message" type="Label" parent="Canvas/PageMargin/Columns/SemanticAssets/Content/Notice/NoticeCopy"]
+layout_mode = 2
+theme_type_variation = &"RookframeMeta"
+text = "RFG-161 supplies the inventory-backed reusable relationships."
+autowrap_mode = 2
+
+[node name="Value" type="Label" parent="Canvas/PageMargin/Columns/SemanticAssets/Content"]
+layout_mode = 2
+theme_type_variation = &"RookframeValue"
+text = "62 semantic icons"
+
+[node name="Badge" type="PanelContainer" parent="Canvas/PageMargin/Columns/SemanticAssets/Content"]
+layout_mode = 2
+size_flags_horizontal = 0
+theme_type_variation = &"RookframeBadge"
+
+[node name="Text" type="Label" parent="Canvas/PageMargin/Columns/SemanticAssets/Content/Badge"]
+layout_mode = 2
+theme_type_variation = &"RookframeBadgeText"
+text = "GODOT 4.7"

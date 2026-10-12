@@ -1,0 +1,10 @@
+.godot/
+.plugged/
+rookframe/ui/
+addons/gdUnit4/
+reports/
+*.translation
+__pycache__/
+examples/exact-commit-consumer/.godot/
+examples/exact-commit-consumer/.plugged/
+examples/exact-commit-consumer/rookframe/ui/

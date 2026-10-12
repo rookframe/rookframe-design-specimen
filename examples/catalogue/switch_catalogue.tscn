@@ -1,0 +1,100 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://examples/catalogue/switch_catalogue.gd" id="script"]
+[ext_resource type="PackedScene" path="res://rookframe/ui/menu/Switch.tscn" id="switch"]
+[ext_resource type="PackedScene" path="res://rookframe/ui/menu/SwitchGroup.tscn" id="group"]
+
+[node name="Switches" type="VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 20
+script = ExtResource("script")
+
+[node name="Heading" type="Label" parent="."]
+layout_mode = 2
+theme_type_variation = &"settings_heading"
+text = "RUN THIS WORLD"
+
+[node name="Group" parent="." instance=ExtResource("group")]
+layout_mode = 2
+
+[node name="Device" parent="Group/Inset/Options" instance=ExtResource("switch")]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 1.0
+button_pressed = true
+title = "On this device"
+description = "Runs here while you have it open."
+
+[node name="Server" parent="Group/Inset/Options" instance=ExtResource("switch")]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 1.0
+title = "On a dedicated server"
+description = "The server stores and runs the World."
+
+[node name="Selection" type="Label" parent="."]
+layout_mode = 2
+theme_type_variation = &"settings_help"
+text = "On this device selected."
+
+[node name="Rule" type="HSeparator" parent="."]
+layout_mode = 2
+theme_type_variation = &"settings_divider"
+
+[node name="AudienceHeading" type="Label" parent="."]
+layout_mode = 2
+theme_type_variation = &"settings_label"
+text = "Who can join · three options"
+
+[node name="AudienceGroup" parent="." instance=ExtResource("group")]
+layout_mode = 2
+
+[node name="Private" parent="AudienceGroup/Inset/Options" instance=ExtResource("switch")]
+layout_mode = 2
+button_pressed = true
+title = "Only me"
+description = "Keep the World private."
+
+[node name="Invited" parent="AudienceGroup/Inset/Options" instance=ExtResource("switch")]
+layout_mode = 2
+title = "Invited players"
+description = "Choose who can join."
+
+[node name="Link" parent="AudienceGroup/Inset/Options" instance=ExtResource("switch")]
+layout_mode = 2
+title = "Anyone with the link"
+description = "Let players join through a link."
+
+[node name="AudienceSelection" type="Label" parent="."]
+layout_mode = 2
+theme_type_variation = &"settings_help"
+text = "Only me selected."
+
+[node name="DisabledHeading" type="Label" parent="."]
+layout_mode = 2
+theme_type_variation = &"settings_label"
+text = "Unavailable choices"
+
+[node name="DisabledGroup" parent="." instance=ExtResource("group")]
+layout_mode = 2
+
+[node name="Selected" parent="DisabledGroup/Inset/Options" instance=ExtResource("switch")]
+layout_mode = 2
+size_flags_horizontal = 3
+disabled = true
+button_pressed = true
+title = "Current host"
+description = "This choice is locked while the World is running."
+
+[node name="Unselected" parent="DisabledGroup/Inset/Options" instance=ExtResource("switch")]
+layout_mode = 2
+size_flags_horizontal = 3
+disabled = true
+title = "Another host"
+description = "Stop the World before changing its host."
+
+[node name="Help" type="Label" parent="."]
+layout_mode = 2
+theme_type_variation = &"settings_help"
+text = "Choose a card with the pointer, or use Tab and Space / Enter."
+autowrap_mode = 3

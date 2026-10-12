@@ -1,0 +1,1155 @@
+[gd_scene load_steps=36 format=3]
+
+[ext_resource type="Theme" path="res://rookframe/ui/theme/rookframe_theme.tres" id="1_theme"]
+[ext_resource type="Script" path="res://examples/catalogue/legacy_catalogue.gd" id="2_script"]
+[ext_resource type="PackedScene" path="res://rookframe/ui/components/forms/text_field.tscn" id="3_text_field"]
+[ext_resource type="PackedScene" path="res://rookframe/ui/components/forms/text_area.tscn" id="4_text_area"]
+[ext_resource type="PackedScene" path="res://rookframe/ui/components/forms/search_field.tscn" id="5_search"]
+[ext_resource type="PackedScene" path="res://rookframe/ui/components/forms/choice_row.tscn" id="6_choice"]
+[ext_resource type="PackedScene" path="res://rookframe/ui/components/forms/image_field.tscn" id="7_image"]
+[ext_resource type="PackedScene" path="res://rookframe/ui/components/layout/responsive_split.tscn" id="8_split"]
+[ext_resource type="PackedScene" path="res://rookframe/ui/components/layout/section.tscn" id="9_section"]
+[ext_resource type="PackedScene" path="res://rookframe/ui/components/layout/action_bar.tscn" id="10_action_bar"]
+[ext_resource type="PackedScene" path="res://rookframe/ui/components/layout/adaptive_toolbar.tscn" id="11_toolbar"]
+[ext_resource type="PackedScene" path="res://rookframe/ui/components/data/icon_action_grid.tscn" id="12_action_grid"]
+[ext_resource type="PackedScene" path="res://rookframe/ui/components/feedback/notice.tscn" id="13_notice"]
+[ext_resource type="PackedScene" path="res://rookframe/ui/components/feedback/task_state.tscn" id="14_task_state"]
+[ext_resource type="PackedScene" path="res://rookframe/ui/components/feedback/step_progress.tscn" id="15_step"]
+[ext_resource type="PackedScene" path="res://rookframe/ui/components/data/metric_strip.tscn" id="16_metric_strip"]
+[ext_resource type="PackedScene" path="res://rookframe/ui/components/data/badge.tscn" id="17_badge"]
+[ext_resource type="PackedScene" path="res://rookframe/ui/components/data/roll_row.tscn" id="18_roll"]
+[ext_resource type="PackedScene" path="res://rookframe/ui/components/data/structured_row.tscn" id="19_row"]
+[ext_resource type="PackedScene" path="res://rookframe/ui/components/surfaces/managed_surface.tscn" id="20_managed"]
+[ext_resource type="Texture2D" path="res://rookframe/ui/icons/rook.svg" id="21_rook"]
+[ext_resource type="Texture2D" path="res://rookframe/ui/icons/info.svg" id="22_info"]
+[ext_resource type="Texture2D" path="res://rookframe/ui/icons/warning.svg" id="23_warning"]
+[ext_resource type="Texture2D" path="res://rookframe/ui/icons/world.svg" id="24_world"]
+[ext_resource type="PackedScene" path="res://rookframe/ui/components/layout/adaptive_grid.tscn" id="25_adaptive_grid"]
+[ext_resource type="PackedScene" path="res://rookframe/ui/components/overlays/dialog.tscn" id="26_dialog"]
+[ext_resource type="PackedScene" path="res://rookframe/ui/components/overlays/file_picker_dialog.tscn" id="27_file_picker"]
+[ext_resource type="PackedScene" path="res://rookframe/ui/components/layout/compact_route_heading.tscn" id="28_compact_heading"]
+[ext_resource type="PackedScene" path="res://rookframe/ui/components/forms/package_choice.tscn" id="29_package_choice"]
+[ext_resource type="PackedScene" path="res://rookframe/ui/components/data/key_value_row.tscn" id="30_key_value"]
+[ext_resource type="PackedScene" path="res://rookframe/ui/components/data/package_row.tscn" id="31_package_row"]
+[ext_resource type="PackedScene" path="res://rookframe/ui/components/forms/package_choice_card.tscn" id="32_package_choice_card"]
+[ext_resource type="PackedScene" path="res://rookframe/ui/components/data/package_card.tscn" id="33_package_card"]
+[ext_resource type="PackedScene" path="res://rookframe/ui/components/data/action_row.tscn" id="34_action_row"]
+[ext_resource type="PackedScene" path="res://rookframe/ui/components/data/action_link.tscn" id="35_action_link"]
+
+[node name="VisualCatalogue" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("1_theme")
+script = ExtResource("2_script")
+
+[node name="Canvas" type="PanelContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_type_variation = &"RookframeCanvas"
+
+[node name="Page" type="MarginContainer" parent="Canvas"]
+layout_mode = 2
+theme_override_constants/margin_left = 24
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_right = 24
+theme_override_constants/margin_bottom = 20
+
+[node name="Stack" type="VBoxContainer" parent="Canvas/Page"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="CurrentCatalogue" type="Button" parent="Canvas/Page/Stack"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 0
+custom_minimum_size = Vector2(0, 44)
+theme_type_variation = &"RookframeQuietButton"
+text = "Close Silkbound controls"
+
+[node name="Header" type="HBoxContainer" parent="Canvas/Page/Stack"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="Mark" type="TextureRect" parent="Canvas/Page/Stack/Header"]
+self_modulate = Color(0.815686, 0.745098, 0.556863, 1)
+custom_minimum_size = Vector2(44, 44)
+layout_mode = 2
+texture = ExtResource("21_rook")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Copy" type="VBoxContainer" parent="Canvas/Page/Stack/Header"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 2
+
+[node name="Title" type="Label" parent="Canvas/Page/Stack/Header/Copy"]
+layout_mode = 2
+theme_type_variation = &"RookframeTitle"
+text = "Silkbound Ledger · UI Kit catalogue"
+
+[node name="Subtitle" type="Label" parent="Canvas/Page/Stack/Header/Copy"]
+layout_mode = 2
+theme_type_variation = &"RookframeMeta"
+text = "Native Godot controls, public relationships, semantic states, focus, long copy, and constrained layouts"
+autowrap_mode = 2
+
+[node name="Tabs" type="TabContainer" parent="Canvas/Page/Stack"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="Native" type="ScrollContainer" parent="Canvas/Page/Stack/Tabs"]
+layout_mode = 2
+horizontal_scroll_mode = 0
+
+[node name="Margin" type="MarginContainer" parent="Canvas/Page/Stack/Tabs/Native"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 16
+
+[node name="Content" type="VBoxContainer" parent="Canvas/Page/Stack/Tabs/Native/Margin"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 16
+
+[node name="Heading" type="Label" parent="Canvas/Page/Stack/Tabs/Native/Margin/Content"]
+layout_mode = 2
+theme_type_variation = &"RookframeHeading"
+text = "Native Godot + Rookframe theme"
+
+[node name="Body" type="Label" parent="Canvas/Page/Stack/Tabs/Native/Margin/Content"]
+layout_mode = 2
+theme_type_variation = &"RookframeBody"
+text = "Hover and focus these ordinary Controls directly. Godot retains button, input, range, selection, menu, dialog, popup, tab, grid, window, and navigation behavior."
+autowrap_mode = 2
+
+[node name="Buttons" type="HFlowContainer" parent="Canvas/Page/Stack/Tabs/Native/Margin/Content"]
+layout_mode = 2
+theme_override_constants/h_separation = 12
+theme_override_constants/v_separation = 12
+
+[node name="Primary" type="Button" parent="Canvas/Page/Stack/Tabs/Native/Margin/Content/Buttons"]
+custom_minimum_size = Vector2(0, 52)
+layout_mode = 2
+theme_type_variation = &"RookframePrimaryButton"
+text = "Normal primary"
+
+[node name="Pressed" type="Button" parent="Canvas/Page/Stack/Tabs/Native/Margin/Content/Buttons"]
+custom_minimum_size = Vector2(0, 52)
+layout_mode = 2
+theme_type_variation = &"RookframeSecondaryButton"
+toggle_mode = true
+button_pressed = true
+text = "Pressed / selected"
+
+[node name="Quiet" type="Button" parent="Canvas/Page/Stack/Tabs/Native/Margin/Content/Buttons"]
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+theme_type_variation = &"RookframeQuietButton"
+text = "Quiet"
+
+[node name="Danger" type="Button" parent="Canvas/Page/Stack/Tabs/Native/Margin/Content/Buttons"]
+custom_minimum_size = Vector2(0, 52)
+layout_mode = 2
+theme_type_variation = &"RookframeDangerButton"
+text = "Danger"
+
+[node name="TabRole" type="Button" parent="Canvas/Page/Stack/Tabs/Native/Margin/Content/Buttons"]
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+theme_type_variation = &"RookframeTabButton"
+text = "Tab role"
+
+[node name="Disabled" type="Button" parent="Canvas/Page/Stack/Tabs/Native/Margin/Content/Buttons"]
+custom_minimum_size = Vector2(0, 52)
+layout_mode = 2
+theme_type_variation = &"RookframePrimaryButton"
+disabled = true
+text = "Disabled"
+
+[node name="CircularAction" type="Button" parent="Canvas/Page/Stack/Tabs/Native/Margin/Content/Buttons"]
+custom_minimum_size = Vector2(62, 62)
+layout_mode = 2
+theme_type_variation = &"RookframeCircularAction"
+icon = ExtResource("21_rook")
+icon_alignment = 1
+expand_icon = true
+accessibility_name = "Circular action example"
+
+[node name="CircularDisabled" type="Button" parent="Canvas/Page/Stack/Tabs/Native/Margin/Content/Buttons"]
+custom_minimum_size = Vector2(48, 48)
+layout_mode = 2
+theme_type_variation = &"RookframeCircularAction"
+theme_override_constants/icon_max_width = 24
+icon = ExtResource("21_rook")
+icon_alignment = 1
+expand_icon = true
+disabled = true
+accessibility_name = "Disabled circular action example"
+
+[node name="CompactAction" type="Button" parent="Canvas/Page/Stack/Tabs/Native/Margin/Content/Buttons"]
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+theme_type_variation = &"RookframeCompactAction"
+text = "Compact action"
+
+[node name="CompactActionTouch" type="Button" parent="Canvas/Page/Stack/Tabs/Native/Margin/Content/Buttons"]
+custom_minimum_size = Vector2(0, 48)
+layout_mode = 2
+theme_type_variation = &"RookframeCompactActionTouch"
+text = "Touch action"
+
+[node name="SemanticSurfaces" type="BoxContainer" parent="Canvas/Page/Stack/Tabs/Native/Margin/Content"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Raised" type="PanelContainer" parent="Canvas/Page/Stack/Tabs/Native/Margin/Content/SemanticSurfaces"]
+custom_minimum_size = Vector2(280, 72)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"RookframeRaisedSurface"
+
+[node name="Copy" type="Label" parent="Canvas/Page/Stack/Tabs/Native/Margin/Content/SemanticSurfaces/Raised"]
+layout_mode = 2
+theme_type_variation = &"RookframeBody"
+text = "Raised surface variation"
+vertical_alignment = 1
+
+[node name="Notice" type="PanelContainer" parent="Canvas/Page/Stack/Tabs/Native/Margin/Content/SemanticSurfaces"]
+custom_minimum_size = Vector2(280, 72)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"RookframeNotice"
+
+[node name="Copy" type="Label" parent="Canvas/Page/Stack/Tabs/Native/Margin/Content/SemanticSurfaces/Notice"]
+layout_mode = 2
+theme_type_variation = &"RookframeBody"
+text = "Generic notice variation"
+vertical_alignment = 1
+
+[node name="Inputs" type="GridContainer" parent="Canvas/Page/Stack/Tabs/Native/Margin/Content"]
+layout_mode = 2
+columns = 3
+
+[node name="Line" type="LineEdit" parent="Canvas/Page/Stack/Tabs/Native/Margin/Content/Inputs"]
+custom_minimum_size = Vector2(240, 44)
+layout_mode = 2
+placeholder_text = "Native LineEdit"
+
+[node name="Spin" type="SpinBox" parent="Canvas/Page/Stack/Tabs/Native/Margin/Content/Inputs"]
+custom_minimum_size = Vector2(160, 44)
+layout_mode = 2
+min_value = 1.0
+max_value = 20.0
+value = 7.0
+
+[node name="Slider" type="HSlider" parent="Canvas/Page/Stack/Tabs/Native/Margin/Content/Inputs"]
+custom_minimum_size = Vector2(240, 44)
+layout_mode = 2
+value = 62.0
+
+[node name="Check" type="CheckBox" parent="Canvas/Page/Stack/Tabs/Native/Margin/Content/Inputs"]
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+button_pressed = true
+text = "Checked"
+
+[node name="Switch" type="CheckButton" parent="Canvas/Page/Stack/Tabs/Native/Margin/Content/Inputs"]
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+text = "Boolean switch"
+
+[node name="NativeOption" type="OptionButton" parent="Canvas/Page/Stack/Tabs/Native/Margin/Content/Inputs"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(180, 44)
+layout_mode = 2
+
+[node name="Multiline" type="TextEdit" parent="Canvas/Page/Stack/Tabs/Native/Margin/Content"]
+custom_minimum_size = Vector2(0, 112)
+layout_mode = 2
+placeholder_text = "Native multiline editor with constrained, wrapping copy"
+wrap_mode = 1
+
+[node name="Dense" type="BoxContainer" parent="Canvas/Page/Stack/Tabs/Native/Margin/Content"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="NativeList" type="ItemList" parent="Canvas/Page/Stack/Tabs/Native/Margin/Content/Dense"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(360, 220)
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="NativeTree" type="Tree" parent="Canvas/Page/Stack/Tabs/Native/Margin/Content/Dense"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(360, 220)
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Overlays" type="HFlowContainer" parent="Canvas/Page/Stack/Tabs/Native/Margin/Content"]
+layout_mode = 2
+
+[node name="NativeMenu" type="MenuButton" parent="Canvas/Page/Stack/Tabs/Native/Margin/Content/Overlays"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+text = "Popup menu"
+
+[node name="OpenAccept" type="Button" parent="Canvas/Page/Stack/Tabs/Native/Margin/Content/Overlays"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+theme_type_variation = &"RookframeSecondaryButton"
+text = "Information dialog"
+
+[node name="OpenConfirm" type="Button" parent="Canvas/Page/Stack/Tabs/Native/Margin/Content/Overlays"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+theme_type_variation = &"RookframeSecondaryButton"
+text = "Confirmation dialog"
+
+[node name="OpenFile" type="Button" parent="Canvas/Page/Stack/Tabs/Native/Margin/Content/Overlays"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+theme_type_variation = &"RookframeSecondaryButton"
+text = "File picker"
+
+[node name="NativeTabs" type="TabContainer" parent="Canvas/Page/Stack/Tabs/Native/Margin/Content"]
+custom_minimum_size = Vector2(0, 160)
+layout_mode = 2
+
+[node name="Overview" type="PanelContainer" parent="Canvas/Page/Stack/Tabs/Native/Margin/Content/NativeTabs"]
+layout_mode = 2
+theme_type_variation = &"RookframeInsetSurface"
+
+[node name="Copy" type="Label" parent="Canvas/Page/Stack/Tabs/Native/Margin/Content/NativeTabs/Overview"]
+layout_mode = 2
+theme_type_variation = &"RookframeBody"
+text = "TabContainer retains and switches one already-loaded panel set."
+autowrap_mode = 2
+
+[node name="Details" type="PanelContainer" parent="Canvas/Page/Stack/Tabs/Native/Margin/Content/NativeTabs"]
+layout_mode = 2
+theme_type_variation = &"RookframeInsetSurface"
+
+[node name="Copy" type="Label" parent="Canvas/Page/Stack/Tabs/Native/Margin/Content/NativeTabs/Details"]
+layout_mode = 2
+theme_type_variation = &"RookframeBody"
+text = "Keyboard navigation and selected state remain native Godot behavior."
+autowrap_mode = 2
+
+[node name="Forms" type="ScrollContainer" parent="Canvas/Page/Stack/Tabs"]
+layout_mode = 2
+horizontal_scroll_mode = 0
+
+[node name="Margin" type="MarginContainer" parent="Canvas/Page/Stack/Tabs/Forms"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 16
+
+[node name="Content" type="VBoxContainer" parent="Canvas/Page/Stack/Tabs/Forms/Margin"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 16
+
+[node name="Heading" type="Label" parent="Canvas/Page/Stack/Tabs/Forms/Margin/Content"]
+layout_mode = 2
+theme_type_variation = &"RookframeHeading"
+text = "Forms, search, and choice"
+
+[node name="TextField" parent="Canvas/Page/Stack/Tabs/Forms/Margin/Content" instance=ExtResource("3_text_field")]
+layout_mode = 2
+label_text = "Record name"
+value = "Clockwork archive"
+help_text = "Help remains adjacent to the editor and yields to an error."
+
+[node name="ErrorField" parent="Canvas/Page/Stack/Tabs/Forms/Margin/Content" instance=ExtResource("3_text_field")]
+layout_mode = 2
+label_text = "Public identity"
+value = "ManagerRecord"
+error_text = "Use a context-neutral semantic name."
+
+[node name="TextArea" parent="Canvas/Page/Stack/Tabs/Forms/Margin/Content" instance=ExtResource("4_text_area")]
+layout_mode = 2
+label_text = "Long description"
+value = "A deliberately long block of copy demonstrates wrapping, readable line length, and a 112 pixel minimum editor height without moving validation away from the native input."
+help_text = "Commit occurs when focus leaves the native TextEdit."
+
+[node name="Search" parent="Canvas/Page/Stack/Tabs/Forms/Margin/Content" instance=ExtResource("5_search")]
+layout_mode = 2
+value = "lantern"
+placeholder = "Search records"
+
+[node name="Choices" type="VBoxContainer" parent="Canvas/Page/Stack/Tabs/Forms/Margin/Content"]
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="Detailed" parent="Canvas/Page/Stack/Tabs/Forms/Margin/Content/Choices" instance=ExtResource("6_choice")]
+layout_mode = 2
+title = "Detailed choice"
+description = "The complete row is the target and supporting copy remains part of its accessible description."
+button_pressed = true
+
+[node name="Compact" parent="Canvas/Page/Stack/Tabs/Forms/Margin/Content/Choices" instance=ExtResource("6_choice")]
+layout_mode = 2
+title = "Compact choice"
+variant = 1
+
+[node name="Disabled" parent="Canvas/Page/Stack/Tabs/Forms/Margin/Content/Choices" instance=ExtResource("6_choice")]
+layout_mode = 2
+disabled = true
+title = "Unavailable choice"
+description = "Disabled state stays readable and cannot receive focus."
+
+[node name="PackageChoice" parent="Canvas/Page/Stack/Tabs/Forms/Margin/Content" instance=ExtResource("29_package_choice")]
+layout_mode = 2
+package_name = "Rookframe Fixture Essentials"
+detail_text = "Optional Package · 1.0.1\nCrate, Lantern, and Miniature"
+button_pressed = true
+
+[node name="PackageChoiceCard" parent="Canvas/Page/Stack/Tabs/Forms/Margin/Content" instance=ExtResource("32_package_choice_card")]
+layout_mode = 2
+package_name = "Rookframe Fixture Essentials"
+detail_text = "Optional Package · 1.0.1\nCrate, Lantern, and Miniature"
+button_pressed = true
+
+[node name="ImageField" parent="Canvas/Page/Stack/Tabs/Forms/Margin/Content" instance=ExtResource("7_image")]
+layout_mode = 2
+title = "Record artwork"
+help_text = "Current image preview. Choose replacement emits a request; the host still owns file admission and persistence."
+preview = ExtResource("21_rook")
+change_label = "Choose replacement"
+
+[node name="Layout" type="ScrollContainer" parent="Canvas/Page/Stack/Tabs"]
+layout_mode = 2
+horizontal_scroll_mode = 0
+
+[node name="Margin" type="MarginContainer" parent="Canvas/Page/Stack/Tabs/Layout"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 16
+
+[node name="Content" type="VBoxContainer" parent="Canvas/Page/Stack/Tabs/Layout/Margin"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 16
+
+[node name="Heading" type="Label" parent="Canvas/Page/Stack/Tabs/Layout/Margin/Content"]
+layout_mode = 2
+theme_type_variation = &"RookframeHeading"
+text = "Responsive layout and navigation relationships"
+
+[node name="CompactRouteHeading" parent="Canvas/Page/Stack/Tabs/Layout/Margin/Content" instance=ExtResource("28_compact_heading")]
+layout_mode = 2
+kicker_text = "World select"
+title_text = "Your worlds"
+detail_text = "Compact route hierarchy stays together in constrained surfaces."
+
+[node name="ResponsiveSplit" parent="Canvas/Page/Stack/Tabs/Layout/Margin/Content" instance=ExtResource("8_split")]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 180)
+layout_mode = 2
+
+[node name="SectionDemo" parent="Canvas/Page/Stack/Tabs/Layout/Margin/Content" instance=ExtResource("9_section")]
+unique_name_in_owner = true
+layout_mode = 2
+title = "Stable section header"
+description = "A trailing action lane cannot move the title or rows below it."
+
+[node name="ActionBarDemo" parent="Canvas/Page/Stack/Tabs/Layout/Margin/Content" instance=ExtResource("10_action_bar")]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="ToolbarDemo" parent="Canvas/Page/Stack/Tabs/Layout/Margin/Content" instance=ExtResource("11_toolbar")]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="ActionGridHeading" type="Label" parent="Canvas/Page/Stack/Tabs/Layout/Margin/Content"]
+layout_mode = 2
+theme_type_variation = &"RookframeLabel"
+text = "Two-column semantic icon action grid"
+
+[node name="IconActionGrid" parent="Canvas/Page/Stack/Tabs/Layout/Margin/Content" instance=ExtResource("12_action_grid")]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="Feedback" type="ScrollContainer" parent="Canvas/Page/Stack/Tabs"]
+layout_mode = 2
+horizontal_scroll_mode = 0
+
+[node name="Margin" type="MarginContainer" parent="Canvas/Page/Stack/Tabs/Feedback"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 16
+
+[node name="Content" type="VBoxContainer" parent="Canvas/Page/Stack/Tabs/Feedback/Margin"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 12
+
+[node name="Heading" type="Label" parent="Canvas/Page/Stack/Tabs/Feedback/Margin/Content"]
+layout_mode = 2
+theme_type_variation = &"RookframeHeading"
+text = "Feedback and lifecycle"
+
+[node name="Info" parent="Canvas/Page/Stack/Tabs/Feedback/Margin/Content" instance=ExtResource("13_notice")]
+layout_mode = 2
+title = "Informational notice"
+description = "A compact notice wraps long copy and keeps semantic state visible as text."
+dismissible = true
+
+[node name="Pending" parent="Canvas/Page/Stack/Tabs/Feedback/Margin/Content" instance=ExtResource("13_notice")]
+layout_mode = 2
+tone = 1
+title = "Pending operation"
+description = "The spinner icon and Pending label communicate work without relying on gold alone."
+
+[node name="Success" parent="Canvas/Page/Stack/Tabs/Feedback/Margin/Content" instance=ExtResource("13_notice")]
+layout_mode = 2
+tone = 2
+title = "Saved successfully"
+description = "Success remains announced in text."
+
+[node name="Error" parent="Canvas/Page/Stack/Tabs/Feedback/Margin/Content" instance=ExtResource("13_notice")]
+layout_mode = 2
+tone = 3
+title = "Could not save"
+description = "Error copy explains the failure and can host a recovery action."
+
+[node name="States" type="GridContainer" parent="Canvas/Page/Stack/Tabs/Feedback/Margin/Content"]
+layout_mode = 2
+columns = 2
+
+[node name="Loading" parent="Canvas/Page/Stack/Tabs/Feedback/Margin/Content/States" instance=ExtResource("14_task_state")]
+layout_mode = 2
+state = 0
+title = "Loading records"
+description = "One whole-task region blocks the body while the operation is pending."
+
+[node name="Empty" parent="Canvas/Page/Stack/Tabs/Feedback/Margin/Content/States" instance=ExtResource("14_task_state")]
+layout_mode = 2
+state = 1
+title = "No matching records"
+description = "Try clearing the current filters."
+
+[node name="Success" parent="Canvas/Page/Stack/Tabs/Feedback/Margin/Content/States" instance=ExtResource("14_task_state")]
+layout_mode = 2
+state = 2
+title = "Task complete"
+description = "The terminal result remains in the owning surface."
+
+[node name="Error" parent="Canvas/Page/Stack/Tabs/Feedback/Margin/Content/States" instance=ExtResource("14_task_state")]
+layout_mode = 2
+state = 3
+title = "Task failed"
+description = "Recovery actions belong in the provided action slot."
+
+[node name="ProgressHeading" type="Label" parent="Canvas/Page/Stack/Tabs/Feedback/Margin/Content"]
+layout_mode = 2
+theme_type_variation = &"RookframeLabel"
+text = "Character creation wizard"
+
+[node name="Wizard" type="PanelContainer" parent="Canvas/Page/Stack/Tabs/Feedback/Margin/Content"]
+layout_mode = 2
+theme_type_variation = &"RookframeRaisedSurface"
+
+[node name="Content" type="VBoxContainer" parent="Canvas/Page/Stack/Tabs/Feedback/Margin/Content/Wizard"]
+layout_mode = 2
+theme_override_constants/separation = 20
+
+[node name="Header" type="HBoxContainer" parent="Canvas/Page/Stack/Tabs/Feedback/Margin/Content/Wizard/Content"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="Copy" type="VBoxContainer" parent="Canvas/Page/Stack/Tabs/Feedback/Margin/Content/Wizard/Content/Header"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 4
+
+[node name="Eyebrow" type="Label" parent="Canvas/Page/Stack/Tabs/Feedback/Margin/Content/Wizard/Content/Header/Copy"]
+layout_mode = 2
+theme_type_variation = &"RookframeLabel"
+text = "New character"
+
+[node name="Title" type="Label" parent="Canvas/Page/Stack/Tabs/Feedback/Margin/Content/Wizard/Content/Header/Copy"]
+layout_mode = 2
+theme_type_variation = &"RookframeSubtitle"
+text = "Build your character"
+
+[node name="Description" type="Label" parent="Canvas/Page/Stack/Tabs/Feedback/Margin/Content/Wizard/Content/Header/Copy"]
+layout_mode = 2
+theme_type_variation = &"RookframeMeta"
+text = "Complete each step. Your choices remain editable until review."
+autowrap_mode = 2
+
+[node name="Save" type="Label" parent="Canvas/Page/Stack/Tabs/Feedback/Margin/Content/Wizard/Content/Header"]
+layout_mode = 2
+theme_type_variation = &"RookframeSuccess"
+text = "Saved"
+vertical_alignment = 1
+
+[node name="Progress" parent="Canvas/Page/Stack/Tabs/Feedback/Margin/Content/Wizard/Content" instance=ExtResource("15_step")]
+layout_mode = 2
+accessible_label = "Character creation progress"
+steps = PackedStringArray("Class", "Abilities", "Origin", "Equipment", "Identity", "Review")
+current_step = 3
+
+[node name="CurrentStep" type="PanelContainer" parent="Canvas/Page/Stack/Tabs/Feedback/Margin/Content/Wizard/Content"]
+layout_mode = 2
+theme_type_variation = &"RookframeInsetSurface"
+
+[node name="Content" type="VBoxContainer" parent="Canvas/Page/Stack/Tabs/Feedback/Margin/Content/Wizard/Content/CurrentStep"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Eyebrow" type="Label" parent="Canvas/Page/Stack/Tabs/Feedback/Margin/Content/Wizard/Content/CurrentStep/Content"]
+layout_mode = 2
+theme_type_variation = &"RookframeLabel"
+text = "Current step · 3 of 6"
+
+[node name="Title" type="Label" parent="Canvas/Page/Stack/Tabs/Feedback/Margin/Content/Wizard/Content/CurrentStep/Content"]
+layout_mode = 2
+theme_type_variation = &"RookframeHeading"
+text = "Choose an origin"
+
+[node name="Description" type="Label" parent="Canvas/Page/Stack/Tabs/Feedback/Margin/Content/Wizard/Content/CurrentStep/Content"]
+layout_mode = 2
+theme_type_variation = &"RookframeBody"
+text = "Select the history that shaped your character. Your origin influences starting knowledge and story prompts."
+autowrap_mode = 2
+
+[node name="Actions" type="HBoxContainer" parent="Canvas/Page/Stack/Tabs/Feedback/Margin/Content/Wizard/Content"]
+layout_mode = 2
+alignment = 2
+theme_override_constants/separation = 12
+
+[node name="Back" type="Button" parent="Canvas/Page/Stack/Tabs/Feedback/Margin/Content/Wizard/Content/Actions"]
+custom_minimum_size = Vector2(0, 52)
+layout_mode = 2
+theme_type_variation = &"RookframeSecondaryButton"
+text = "Back"
+
+[node name="Continue" type="Button" parent="Canvas/Page/Stack/Tabs/Feedback/Margin/Content/Wizard/Content/Actions"]
+custom_minimum_size = Vector2(0, 52)
+layout_mode = 2
+theme_type_variation = &"RookframePrimaryButton"
+text = "Continue"
+
+[node name="Data" type="ScrollContainer" parent="Canvas/Page/Stack/Tabs"]
+layout_mode = 2
+horizontal_scroll_mode = 0
+
+[node name="Margin" type="MarginContainer" parent="Canvas/Page/Stack/Tabs/Data"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 16
+
+[node name="Content" type="VBoxContainer" parent="Canvas/Page/Stack/Tabs/Data/Margin"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 12
+
+[node name="Heading" type="Label" parent="Canvas/Page/Stack/Tabs/Data/Margin/Content"]
+layout_mode = 2
+theme_type_variation = &"RookframeHeading"
+text = "Structured data display"
+
+[node name="MetricStrip" parent="Canvas/Page/Stack/Tabs/Data/Margin/Content" instance=ExtResource("16_metric_strip")]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="Badges" type="HFlowContainer" parent="Canvas/Page/Stack/Tabs/Data/Margin/Content"]
+layout_mode = 2
+
+[node name="Compatibility" parent="Canvas/Page/Stack/Tabs/Data/Margin/Content/Badges" instance=ExtResource("17_badge")]
+layout_mode = 2
+label_text = "Godot 4.7"
+icon = ExtResource("22_info")
+
+[node name="Warning" parent="Canvas/Page/Stack/Tabs/Data/Margin/Content/Badges" instance=ExtResource("17_badge")]
+layout_mode = 2
+label_text = "Review needed"
+icon = ExtResource("23_warning")
+
+[node name="KeyValueRow" parent="Canvas/Page/Stack/Tabs/Data/Margin/Content" instance=ExtResource("30_key_value")]
+layout_mode = 2
+key_text = "World address"
+value_text = "f13a9c31"
+
+[node name="ActionRow" parent="Canvas/Page/Stack/Tabs/Data/Margin/Content" instance=ExtResource("34_action_row")]
+layout_mode = 2
+title = "World settings"
+description = "Open a compact management action"
+
+[node name="ActionLink" parent="Canvas/Page/Stack/Tabs/Data/Margin/Content" instance=ExtResource("35_action_link")]
+layout_mode = 2
+title = "World settings"
+
+[node name="PackageRow" parent="Canvas/Page/Stack/Tabs/Data/Margin/Content" instance=ExtResource("31_package_row")]
+layout_mode = 2
+package_name = "Rookframe Fixture System"
+detail_text = "Required System · 1.0.1"
+selected = true
+locked = true
+
+[node name="PackageCard" parent="Canvas/Page/Stack/Tabs/Data/Margin/Content" instance=ExtResource("33_package_card")]
+layout_mode = 2
+package_name = "Rookframe Fixture System"
+detail_text = "Required System · 1.0.1"
+selected = true
+locked = true
+
+[node name="RollComplete" parent="Canvas/Page/Stack/Tabs/Data/Margin/Content" instance=ExtResource("18_roll")]
+layout_mode = 2
+state = 0
+ordinal = "1"
+title = "Presence"
+detail = "Rolled d20 + 2"
+result = "17"
+
+[node name="RollCurrent" parent="Canvas/Page/Stack/Tabs/Data/Margin/Content" instance=ExtResource("18_roll")]
+layout_mode = 2
+state = 1
+ordinal = "2"
+title = "Agility"
+detail = "Current roll"
+
+[node name="RollPending" parent="Canvas/Page/Stack/Tabs/Data/Margin/Content" instance=ExtResource("18_roll")]
+layout_mode = 2
+state = 2
+ordinal = "3"
+title = "Toughness"
+detail = "Not rolled"
+
+[node name="RollLocked" parent="Canvas/Page/Stack/Tabs/Data/Margin/Content" instance=ExtResource("18_roll")]
+layout_mode = 2
+state = 3
+ordinal = "4"
+title = "Knowledge"
+detail = "Complete the current roll first"
+
+[node name="RowsHeading" type="Label" parent="Canvas/Page/Stack/Tabs/Data/Margin/Content"]
+layout_mode = 2
+theme_type_variation = &"RookframeLabel"
+text = "Data, detail, compact, stacked, summary, table, header, selection, category, catalogue, portrait, and pending variants"
+autowrap_mode = 2
+
+[node name="DataRow" parent="Canvas/Page/Stack/Tabs/Data/Margin/Content" instance=ExtResource("19_row")]
+layout_mode = 2
+title = "Data row"
+detail = "Ordinary structured fact"
+value_text = "42"
+
+[node name="DetailRow" parent="Canvas/Page/Stack/Tabs/Data/Margin/Content" instance=ExtResource("19_row")]
+layout_mode = 2
+variant = 1
+title = "Detail row"
+detail = "Long supporting copy remains adjacent and wraps."
+status_text = "Ready"
+
+[node name="CompactDetailRow" parent="Canvas/Page/Stack/Tabs/Data/Margin/Content" instance=ExtResource("19_row")]
+layout_mode = 2
+variant = 2
+title = "Compact detail row"
+value_text = "Compact"
+
+[node name="StackedDetailRow" parent="Canvas/Page/Stack/Tabs/Data/Margin/Content" instance=ExtResource("19_row")]
+layout_mode = 2
+variant = 3
+title = "Stacked detail row"
+detail = "This named variant always uses the compact reading profile."
+status_text = "Stacked"
+
+[node name="SummaryRow" parent="Canvas/Page/Stack/Tabs/Data/Margin/Content" instance=ExtResource("19_row")]
+layout_mode = 2
+variant = 4
+title = "Summary row"
+value_text = "3 selected"
+
+[node name="TableRow" parent="Canvas/Page/Stack/Tabs/Data/Margin/Content" instance=ExtResource("19_row")]
+layout_mode = 2
+variant = 5
+title = "Table row"
+value_text = "v1.2.0"
+status_text = "Compatible"
+
+[node name="HeaderRow" parent="Canvas/Page/Stack/Tabs/Data/Margin/Content" instance=ExtResource("19_row")]
+layout_mode = 2
+variant = 6
+title = "Header row"
+detail = "Stable trailing lane"
+
+[node name="SelectionBanner" parent="Canvas/Page/Stack/Tabs/Data/Margin/Content" instance=ExtResource("19_row")]
+layout_mode = 2
+variant = 7
+title = "Selection banner"
+status_text = "Selected"
+
+[node name="CategoryRow" parent="Canvas/Page/Stack/Tabs/Data/Margin/Content" instance=ExtResource("19_row")]
+layout_mode = 2
+variant = 8
+title = "Category row"
+detail = "Context-neutral category geometry"
+leading_image = ExtResource("21_rook")
+
+[node name="CatalogueRow" parent="Canvas/Page/Stack/Tabs/Data/Margin/Content" instance=ExtResource("19_row")]
+layout_mode = 2
+variant = 9
+title = "Catalogue row"
+detail = "Identity, decision copy, and trailing action lane"
+status_text = "Available"
+leading_image = ExtResource("24_world")
+
+[node name="PortraitRow" parent="Canvas/Page/Stack/Tabs/Data/Margin/Content" instance=ExtResource("19_row")]
+layout_mode = 2
+variant = 10
+title = "Portrait row"
+detail = "Bounded image plus record identity"
+leading_image = ExtResource("24_world")
+
+[node name="PendingRow" parent="Canvas/Page/Stack/Tabs/Data/Margin/Content" instance=ExtResource("19_row")]
+layout_mode = 2
+variant = 11
+title = "Pending subrow"
+status_text = "Waiting for approval"
+
+[node name="Icons" type="ScrollContainer" parent="Canvas/Page/Stack/Tabs"]
+layout_mode = 2
+horizontal_scroll_mode = 0
+
+[node name="Margin" type="MarginContainer" parent="Canvas/Page/Stack/Tabs/Icons"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 16
+
+[node name="Content" type="VBoxContainer" parent="Canvas/Page/Stack/Tabs/Icons/Margin"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 12
+
+[node name="Heading" type="Label" parent="Canvas/Page/Stack/Tabs/Icons/Margin/Content"]
+layout_mode = 2
+theme_type_variation = &"RookframeHeading"
+text = "62 semantic icon roles"
+
+[node name="Body" type="Label" parent="Canvas/Page/Stack/Tabs/Icons/Margin/Content"]
+layout_mode = 2
+theme_type_variation = &"RookframeBody"
+text = "Every public semantic name is shown once with its accessible label. This gallery is also the direct AdaptiveGrid catalogue example."
+autowrap_mode = 2
+
+[node name="IconGallery" parent="Canvas/Page/Stack/Tabs/Icons/Margin/Content" instance=ExtResource("25_adaptive_grid")]
+unique_name_in_owner = true
+layout_mode = 2
+maximum_columns = 6
+minimum_column_width = 160.0
+
+[node name="Managed" type="MarginContainer" parent="Canvas/Page/Stack/Tabs"]
+layout_mode = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 16
+
+[node name="Columns" type="HBoxContainer" parent="Canvas/Page/Stack/Tabs/Managed"]
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="Explanation" type="VBoxContainer" parent="Canvas/Page/Stack/Tabs/Managed/Columns"]
+custom_minimum_size = Vector2(360, 0)
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Heading" type="Label" parent="Canvas/Page/Stack/Tabs/Managed/Columns/Explanation"]
+layout_mode = 2
+theme_type_variation = &"RookframeHeading"
+text = "Managed surface"
+
+[node name="Body" type="Label" parent="Canvas/Page/Stack/Tabs/Managed/Columns/Explanation"]
+layout_mode = 2
+theme_type_variation = &"RookframeBody"
+text = "Use the chrome controls, scroll the retained task, and tab through its actions. Placement policy and registries stay host-owned; the scene owns fixed regions, one scroll owner, retained focus, and serializable placement state."
+autowrap_mode = 2
+
+[node name="Status" type="Label" parent="Canvas/Page/Stack/Tabs/Managed/Columns/Explanation"]
+layout_mode = 2
+theme_type_variation = &"RookframeSuccess"
+text = "Header and footer stay fixed; the inset record list is the only scrolling region."
+autowrap_mode = 2
+
+[node name="ManagedDemo" parent="Canvas/Page/Stack/Tabs/Managed/Columns" instance=ExtResource("20_managed")]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(680, 0)
+layout_mode = 2
+surface_title = "Retained package task"
+
+[node name="Shell" type="ScrollContainer" parent="Canvas/Page/Stack/Tabs"]
+layout_mode = 2
+horizontal_scroll_mode = 0
+
+[node name="Margin" type="MarginContainer" parent="Canvas/Page/Stack/Tabs/Shell"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 16
+
+[node name="Content" type="VBoxContainer" parent="Canvas/Page/Stack/Tabs/Shell/Margin"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 12
+
+[node name="Heading" type="Label" parent="Canvas/Page/Stack/Tabs/Shell/Margin/Content"]
+layout_mode = 2
+theme_type_variation = &"RookframeHeading"
+text = "Shell and managed task roles"
+
+[node name="Instructions" type="Label" parent="Canvas/Page/Stack/Tabs/Shell/Margin/Content"]
+layout_mode = 2
+theme_type_variation = &"RookframeBody"
+text = "Tab through enabled actions to inspect native focus. Hover and press them for active states; disabled examples are skipped. The host owns composition and target dimensions."
+autowrap_mode = 2
+
+[node name="Panels" type="HFlowContainer" parent="Canvas/Page/Stack/Tabs/Shell/Margin/Content"]
+layout_mode = 2
+
+[node name="PackageInk" type="PanelContainer" parent="Canvas/Page/Stack/Tabs/Shell/Margin/Content/Panels"]
+custom_minimum_size = Vector2(160, 52)
+layout_mode = 2
+theme_type_variation = &"RookframePackageInk"
+
+[node name="Label" type="Label" parent="Canvas/Page/Stack/Tabs/Shell/Margin/Content/Panels/PackageInk"]
+layout_mode = 2
+text = "PackageInk"
+horizontal_alignment = 1
+
+[node name="PackageFrame" type="PanelContainer" parent="Canvas/Page/Stack/Tabs/Shell/Margin/Content/Panels"]
+custom_minimum_size = Vector2(160, 52)
+layout_mode = 2
+theme_type_variation = &"RookframePackageFrame"
+
+[node name="Label" type="Label" parent="Canvas/Page/Stack/Tabs/Shell/Margin/Content/Panels/PackageFrame"]
+layout_mode = 2
+text = "PackageFrame"
+horizontal_alignment = 1
+
+[node name="GoldFrame" type="PanelContainer" parent="Canvas/Page/Stack/Tabs/Shell/Margin/Content/Panels"]
+custom_minimum_size = Vector2(160, 52)
+layout_mode = 2
+theme_type_variation = &"RookframeGoldFrame"
+
+[node name="Label" type="Label" parent="Canvas/Page/Stack/Tabs/Shell/Margin/Content/Panels/GoldFrame"]
+layout_mode = 2
+text = "GoldFrame"
+horizontal_alignment = 1
+
+[node name="GoldBadge" type="PanelContainer" parent="Canvas/Page/Stack/Tabs/Shell/Margin/Content/Panels"]
+custom_minimum_size = Vector2(160, 52)
+layout_mode = 2
+theme_type_variation = &"RookframeGoldBadge"
+
+[node name="Label" type="Label" parent="Canvas/Page/Stack/Tabs/Shell/Margin/Content/Panels/GoldBadge"]
+layout_mode = 2
+text = "GoldBadge"
+horizontal_alignment = 1
+
+[node name="ShellRail" type="PanelContainer" parent="Canvas/Page/Stack/Tabs/Shell/Margin/Content/Panels"]
+custom_minimum_size = Vector2(160, 52)
+layout_mode = 2
+theme_type_variation = &"RookframeShellRail"
+
+[node name="Label" type="Label" parent="Canvas/Page/Stack/Tabs/Shell/Margin/Content/Panels/ShellRail"]
+layout_mode = 2
+text = "ShellRail"
+horizontal_alignment = 1
+
+[node name="ManagedChrome" type="PanelContainer" parent="Canvas/Page/Stack/Tabs/Shell/Margin/Content/Panels"]
+custom_minimum_size = Vector2(160, 52)
+layout_mode = 2
+theme_type_variation = &"RookframeManagedChrome"
+
+[node name="Label" type="Label" parent="Canvas/Page/Stack/Tabs/Shell/Margin/Content/Panels/ManagedChrome"]
+layout_mode = 2
+text = "ManagedChrome"
+horizontal_alignment = 1
+
+[node name="ManagedChromeCompact" type="PanelContainer" parent="Canvas/Page/Stack/Tabs/Shell/Margin/Content/Panels"]
+custom_minimum_size = Vector2(160, 52)
+layout_mode = 2
+theme_type_variation = &"RookframeManagedChromeCompact"
+
+[node name="Label" type="Label" parent="Canvas/Page/Stack/Tabs/Shell/Margin/Content/Panels/ManagedChromeCompact"]
+layout_mode = 2
+text = "ManagedChromeCompact"
+horizontal_alignment = 1
+
+[node name="ShellControl" type="HBoxContainer" parent="Canvas/Page/Stack/Tabs/Shell/Margin/Content"]
+layout_mode = 2
+
+[node name="Enabled" type="Button" parent="Canvas/Page/Stack/Tabs/Shell/Margin/Content/ShellControl"]
+custom_minimum_size = Vector2(280, 44)
+layout_mode = 2
+theme_type_variation = &"RookframeShellControl"
+text = "ShellControl"
+accessibility_name = "ShellControl enabled example"
+
+[node name="Disabled" type="Button" parent="Canvas/Page/Stack/Tabs/Shell/Margin/Content/ShellControl"]
+custom_minimum_size = Vector2(280, 44)
+layout_mode = 2
+theme_type_variation = &"RookframeShellControl"
+disabled = true
+text = "ShellControl disabled"
+accessibility_name = "ShellControl disabled example"
+
+[node name="ManagedControl" type="HBoxContainer" parent="Canvas/Page/Stack/Tabs/Shell/Margin/Content"]
+layout_mode = 2
+
+[node name="Enabled" type="Button" parent="Canvas/Page/Stack/Tabs/Shell/Margin/Content/ManagedControl"]
+custom_minimum_size = Vector2(280, 44)
+layout_mode = 2
+theme_type_variation = &"RookframeManagedControl"
+text = "ManagedControl"
+accessibility_name = "ManagedControl enabled example"
+
+[node name="Disabled" type="Button" parent="Canvas/Page/Stack/Tabs/Shell/Margin/Content/ManagedControl"]
+custom_minimum_size = Vector2(280, 44)
+layout_mode = 2
+theme_type_variation = &"RookframeManagedControl"
+disabled = true
+text = "ManagedControl disabled"
+accessibility_name = "ManagedControl disabled example"
+
+[node name="ManagedAffirm" type="HBoxContainer" parent="Canvas/Page/Stack/Tabs/Shell/Margin/Content"]
+layout_mode = 2
+
+[node name="Enabled" type="Button" parent="Canvas/Page/Stack/Tabs/Shell/Margin/Content/ManagedAffirm"]
+custom_minimum_size = Vector2(280, 44)
+layout_mode = 2
+theme_type_variation = &"RookframeManagedAffirm"
+text = "ManagedAffirm"
+accessibility_name = "ManagedAffirm enabled example"
+
+[node name="Disabled" type="Button" parent="Canvas/Page/Stack/Tabs/Shell/Margin/Content/ManagedAffirm"]
+custom_minimum_size = Vector2(280, 44)
+layout_mode = 2
+theme_type_variation = &"RookframeManagedAffirm"
+disabled = true
+text = "ManagedAffirm disabled"
+accessibility_name = "ManagedAffirm disabled example"
+
+[node name="ManagedCommit" type="HBoxContainer" parent="Canvas/Page/Stack/Tabs/Shell/Margin/Content"]
+layout_mode = 2
+
+[node name="Enabled" type="Button" parent="Canvas/Page/Stack/Tabs/Shell/Margin/Content/ManagedCommit"]
+custom_minimum_size = Vector2(280, 44)
+layout_mode = 2
+theme_type_variation = &"RookframeManagedCommit"
+text = "ManagedCommit"
+accessibility_name = "ManagedCommit enabled example"
+
+[node name="Disabled" type="Button" parent="Canvas/Page/Stack/Tabs/Shell/Margin/Content/ManagedCommit"]
+custom_minimum_size = Vector2(280, 44)
+layout_mode = 2
+theme_type_variation = &"RookframeManagedCommit"
+disabled = true
+text = "ManagedCommit disabled"
+accessibility_name = "ManagedCommit disabled example"
+
+[node name="ManagedSelected" type="HBoxContainer" parent="Canvas/Page/Stack/Tabs/Shell/Margin/Content"]
+layout_mode = 2
+
+[node name="Enabled" type="Button" parent="Canvas/Page/Stack/Tabs/Shell/Margin/Content/ManagedSelected"]
+custom_minimum_size = Vector2(280, 44)
+layout_mode = 2
+theme_type_variation = &"RookframeManagedSelected"
+text = "ManagedSelected"
+accessibility_name = "ManagedSelected enabled example"
+
+[node name="Disabled" type="Button" parent="Canvas/Page/Stack/Tabs/Shell/Margin/Content/ManagedSelected"]
+custom_minimum_size = Vector2(280, 44)
+layout_mode = 2
+theme_type_variation = &"RookframeManagedSelected"
+disabled = true
+text = "ManagedSelected disabled"
+accessibility_name = "ManagedSelected disabled example"
+
+[node name="DangerOutline" type="HBoxContainer" parent="Canvas/Page/Stack/Tabs/Shell/Margin/Content"]
+layout_mode = 2
+
+[node name="Enabled" type="Button" parent="Canvas/Page/Stack/Tabs/Shell/Margin/Content/DangerOutline"]
+custom_minimum_size = Vector2(280, 44)
+layout_mode = 2
+theme_type_variation = &"RookframeDangerOutline"
+text = "DangerOutline"
+accessibility_name = "DangerOutline enabled example"
+
+[node name="Disabled" type="Button" parent="Canvas/Page/Stack/Tabs/Shell/Margin/Content/DangerOutline"]
+custom_minimum_size = Vector2(280, 44)
+layout_mode = 2
+theme_type_variation = &"RookframeDangerOutline"
+disabled = true
+text = "DangerOutline disabled"
+accessibility_name = "DangerOutline disabled example"
+
+[node name="ManagedSearch" parent="Canvas/Page/Stack/Tabs/Shell/Margin/Content" instance=ExtResource("5_search")]
+layout_mode = 2
+show_label = false
+placeholder = "Managed search with persistent clear target"
+show_clear_when_empty = true
+perimeter_minimum_height = 50.0
+clear_minimum_size = Vector2(50, 50)
+editor_font_size = 16
+
+
+[node name="AcceptDialogDemo" parent="." instance=ExtResource("26_dialog")]
+unique_name_in_owner = true
+eyebrow = "INFORMATION"
+heading = "Ready for the next stage"
+description = "Your current choices are saved. Continue when you are ready to configure the remaining details."
+confirm_label = "Got it"
+show_cancel = false
+
+[node name="ConfirmationDialogDemo" parent="." instance=ExtResource("26_dialog")]
+unique_name_in_owner = true
+tone = 1
+eyebrow = "CONFIRM ACTION"
+heading = "Archive this character?"
+description = "The character leaves your active roster. You can restore it later from the archive."
+confirm_label = "Archive character"
+
+[node name="FileDialogDemo" parent="." instance=ExtResource("27_file_picker")]
+unique_name_in_owner = true
+heading = "Choose a character portrait"
+description = "Browse project or local files. Select an image to preview its details before opening."
+initial_directory = "res://"
+allowed_extensions = PackedStringArray("png", "jpg", "jpeg", "webp", "svg")

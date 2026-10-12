@@ -1,0 +1,21 @@
+config_version=5
+
+[application]
+config/name="Silkbound Ledger · Rookframe design specimen"
+run/main_scene="res://examples/laboratory/laboratory.tscn"
+config/features=PackedStringArray("4.7")
+
+[display]
+window/size/viewport_width=1200
+window/size/viewport_height=850
+window/size/window_width_override=1200
+window/size/window_height_override=850
+window/subwindows/embed_subwindows=false
+
+[editor]
+import/use_multiple_threads=false
+
+[rendering]
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
+environment/defaults/default_clear_color=Color(0.08, 0.10, 0.10, 1)
