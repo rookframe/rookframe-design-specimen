@@ -46,7 +46,7 @@ The tabletop is a flat synthetic surface using existing appearance resources.
   the painter’s assembled 3D sample, including the full-height Surface and Top placement. Floor, ceiling and foundation cards use
   a stock SphereMesh with the actual surface material, in the application's
   existing 3D preview world. Native search, selection and paging remain available;
-  choosing a card returns to the Look, while Back preserves the draft.
+  the gallery stays beside the Region and selecting a card updates the preview immediately. Search and page stay in place while trying choices.
 - Looks contain Interior walls, Exterior walls, Floor, Ceiling and Foundation.
   The two wall slots use the same gallery independently. Legacy single-wall Looks
   initialize both slots from that style. Copy reuses the native prevailing-style
@@ -54,12 +54,15 @@ The tabletop is a flat synthetic surface using existing appearance resources.
   Copy retains the existing foundation omission; choose Foundation before saving. Application
   writes the existing semantic face appearances. The default edited Look uses
   timber inside and rough stone outside to make the distinction inspectable.
+- The Look editor keeps the Region preview on the left and the selected role’s gallery on the right. Seven icon-only role selectors sit below the preview, with tooltips naming the role and current choice. Columns and Brackets exercise the future-role empty states; the pinned source has no style collections for them. They do not change the five-slot recipe or its validation. The local `inline_gallery.gd` adapter changes only split-pane sizing; cards, search, selection and paging remain the native miniature browser.
 - The Look editor previews an actual small Region built by the production
   RoomShell renderer. Rectangle/circle buttons change only the inspection shape.
   Drag the preview (or focus it and use arrow keys) to orbit. The ceiling button
   switches between the native cutaway and the complete enclosure, so all five
-  selected components can be inspected. Shape and ceiling state survive component
-  selection; draft Looks show a placeholder until all five components are chosen.
+  selected components can be inspected. Selecting Interior walls/Floor opens the
+  cutaway; Exterior walls/Ceiling exposes the enclosure. Shape, orbit and manual
+  inspection state survive gallery choices. Draft Looks show a placeholder until
+  all five components are chosen.
 - Painting → Paint → room/building icon opens the unchanged wheel.
 
 All state resets when the mock closes. No 3D room gesture is simulated.
@@ -71,7 +74,7 @@ Pass Godot arguments to `run.sh`, for example `--resolution 844x390`.
 After `--`, fixture flags include `--manager`, `--copy`, `--strip`, `--compose`,
 `--edit`, `--saved-copy`, `--long`. Add `--region-circle` or `--preview-ceiling`
 to `--edit` to open those preview states. The component routes are `--picker-wall`,
-`--picker-exterior_wall`, `--picker-floor`, `--picker-ceiling` and `--picker-foundation`. `--long` adds long
+`--picker-exterior_wall`, `--picker-floor`, `--picker-ceiling`, `--picker-foundation`, `--picker-columns` and `--picker-brackets`. `--long` adds long
 multilingual component captions; `--reduced-motion` disables gallery page motion. `--saved-copy --manager` reproduces the saved
 copy collection state used for the Manager review.
 

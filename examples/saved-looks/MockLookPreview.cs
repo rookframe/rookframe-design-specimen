@@ -7,39 +7,40 @@ public partial class MockLookPreview : VBoxContainer
 {
     internal event Action<bool>? ShapeChanged;
     internal event Action<bool>? CeilingChanged;
+    private TabletopContentPreview _stage = null!;
+    private Label _empty = null!;
+    private Button _roof = null!;
+    private RegionLook _look = new();
+    private MockData _data = null!;
+    private bool _circular, _ceiling;
 
     internal void Configure(RegionLook look, MockData data, bool circular, bool ceiling, bool compact)
     {
-        AddThemeConstantOverride("separation", 6);
-        var complete = look.Encode().Count == 5;
-        var stage = GD.Load<PackedScene>(MockUi.Ui + "TabletopContentPreview.tscn")
+        _data = data; _circular = circular; _ceiling = ceiling;
+        AddThemeConstantOverride("separation", compact ? 4 : 6);
+        _stage = GD.Load<PackedScene>(MockUi.Ui + "TabletopContentPreview.tscn")
             .Instantiate<TabletopContentPreview>();
-        stage.CustomMinimumSize = new(0, compact ? 108 : 230);
-        AddChild(stage);
-        stage.MouseFilter = MouseFilterEnum.Stop;
-        stage.FocusMode = FocusModeEnum.All;
-        stage.AccessibilityName = "3D Look preview";
-        stage.TooltipText = "Drag to rotate · arrow keys to rotate and tilt";
+        _stage.CustomMinimumSize = new(0, compact ? 72 : 230);
+        AddChild(_stage);
+        _stage.MouseFilter = MouseFilterEnum.Stop;
+        _stage.FocusMode = FocusModeEnum.All;
+        _stage.AccessibilityName = "3D Look preview";
+        _stage.TooltipText = "Drag to rotate · arrow keys to rotate and tilt";
         var focus = new Panel { MouseFilter = MouseFilterEnum.Ignore, Visible = false };
         focus.AddThemeStyleboxOverride("panel", MockUi.Controls.GetStylebox("focus", "RookframeActionIcon"));
-        stage.AddChild(focus);
+        _stage.AddChild(focus);
         focus.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
-        stage.FocusEntered += focus.Show;
-        stage.FocusExited += focus.Hide;
-        if (complete) stage.SetMockRegion(look, data, circular, ceiling);
-        else
+        _stage.FocusEntered += focus.Show;
+        _stage.FocusExited += focus.Hide;
+        _empty = new Label
         {
-            stage.Hide();
-            var empty = new Label
-            {
-                Text = "Choose components to preview",
-                HorizontalAlignment = HorizontalAlignment.Center,
-                VerticalAlignment = VerticalAlignment.Center,
-                AutowrapMode = TextServer.AutowrapMode.WordSmart,
-                SizeFlagsVertical = SizeFlags.ExpandFill
-            };
-            AddChild(empty);
-        }
+            Text = "Choose components to preview",
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center,
+            AutowrapMode = TextServer.AutowrapMode.WordSmart,
+            SizeFlagsVertical = SizeFlags.ExpandFill
+        };
+        AddChild(_empty);
         var tools = new HBoxContainer();
         tools.AddThemeConstantOverride("separation", 6);
         AddChild(tools);
@@ -54,26 +55,46 @@ public partial class MockLookPreview : VBoxContainer
             button.Toggled += selected =>
             {
                 if (!selected) return;
-                circular = isCircle;
-                ShapeChanged?.Invoke(circular);
-                if (complete) stage.SetMockRegion(look, data, circular, ceiling);
+                _circular = isCircle;
+                ShapeChanged?.Invoke(_circular);
+                Refresh();
             };
             tools.AddChild(button);
         }
         tools.AddChild(new Control { SizeFlagsHorizontal = SizeFlags.ExpandFill });
-        var roof = MockUi.Button("eye", "Show ceiling", () => { });
-        roof.Icon = AppearanceIcons.SubjectTexture("ceiling");
-        roof.ToggleMode = true;
-        roof.Disabled = !complete;
-        roof.SetPressedNoSignal(ceiling);
-        roof.TooltipText = roof.AccessibilityName = ceiling ? "Show interior" : "Show exterior and ceiling";
-        roof.Toggled += shown =>
+        _roof = MockUi.Button("eye", "Show ceiling", () => { });
+        _roof.Icon = AppearanceIcons.SubjectTexture("ceiling");
+        _roof.ToggleMode = true;
+        _roof.SetPressedNoSignal(ceiling);
+        _roof.Toggled += shown =>
         {
-            ceiling = shown;
-            roof.TooltipText = roof.AccessibilityName = shown ? "Show interior" : "Show exterior and ceiling";
+            _ceiling = shown;
             CeilingChanged?.Invoke(shown);
-            if (complete) stage.SetMockRegion(look, data, circular, ceiling);
+            Refresh();
         };
-        tools.AddChild(roof);
+        tools.AddChild(_roof);
+        UpdateLook(look);
+    }
+    internal void UpdateLook(RegionLook look)
+    {
+        _look = look;
+        Refresh();
+    }
+    internal void InspectRole(string role)
+    {
+        if (role is not ("wall" or "exterior_wall" or "floor" or "ceiling")) return;
+        _ceiling = role is "exterior_wall" or "ceiling";
+        _roof.SetPressedNoSignal(_ceiling);
+        CeilingChanged?.Invoke(_ceiling);
+        Refresh();
+    }
+    private void Refresh()
+    {
+        var complete = _look.Encode().Count == 5;
+        _stage.Visible = complete;
+        _empty.Visible = !complete;
+        _roof.Disabled = !complete;
+        _roof.TooltipText = _roof.AccessibilityName = _ceiling ? "Show interior" : "Show exterior and ceiling";
+        if (complete) _stage.SetMockRegion(_look, _data, _circular, _ceiling);
     }
 }

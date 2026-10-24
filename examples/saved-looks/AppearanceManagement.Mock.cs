@@ -21,7 +21,12 @@ public partial class AppearanceManagement
     private bool _previewCircular, _previewCeiling;
     private LineEdit? _lookName;
     private Button? _saveLook;
-    private string _pickerRole = "";
+    private string _pickerRole = "wall";
+    private static readonly string[] MockEditorRoles = ["wall", "exterior_wall", "floor", "ceiling", "foundation", "columns", "brackets"];
+    private MockLookPreview? _regionPreview;
+    private VBoxContainer? _componentPane;
+    private Label? _componentTitle, _componentChoice;
+    private readonly Dictionary<string, Button> _componentButtons = [];
     private readonly HashSet<ulong> _augmentedRows = [];
     internal bool MockEditing => _lookEditor is not null;
 
@@ -202,7 +207,7 @@ public partial class AppearanceManagement
         _readOnly = reference is not null && !reference.StartsWith(MockData.Personal);
         _draftName = reference is null ? "" : _mock.Display(_mock.Entry(reference));
         _draftCategory = _category == AppearancePalette.Pinned ? "all" : _category;
-        _pickerRole = "";
+        _pickerRole = "wall";
         _previewCircular = OS.GetCmdlineUserArgs().Contains("--region-circle");
         _previewCeiling = OS.GetCmdlineUserArgs().Contains("--preview-ceiling");
         _browserKey="";
@@ -229,21 +234,35 @@ public partial class AppearanceManagement
     {
         RemovePickerBack();
         if (_lookEditor is not null) { _lookEditor.GetParent().RemoveChild(_lookEditor); _lookEditor.QueueFree(); }
+        _componentButtons.Clear();
+        _saveLook = null;
         GetNode<Control>(Column).Hide(); Mobile.Hide();
         GetNode<Control>("Header").Show(); GetNode<Control>("Body").Show();
         GetNode<Label>("Header/Content/Row/Titles/Title").Text = _readOnly ? "Inspect Look" : _editingReference is null ? "Create Look" : "Edit Look";
         SetProcessInput(false);
+        var compact = Size.Y < 540;
         _lookEditor = new VBoxContainer { Name = "LookEditor" };
-        _lookEditor.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
-        _lookEditor.AddThemeConstantOverride("separation", 12);
+        _lookEditor.AddThemeConstantOverride("separation", compact ? 8 : 20);
         GetNode<Control>("Body/Content").AddChild(_lookEditor);
         LayoutMockEditor();
-        if (_pickerRole.Length > 0) { BuildMockPicker(); return; }
-        var compact = Size.Y < 540;
-        var top = new HBoxContainer(); top.AddThemeConstantOverride("separation", 12);
+
+        var top = new HBoxContainer { Name = "Metadata" };
+        top.AddThemeConstantOverride("separation", compact ? 6 : 12);
         top.AddChild(MockUi.Button("back", "Back to Looks", EndMockEdit));
-        var heading = MockUi.Label(_readOnly ? "Rookframe · Application Content" : _mock.Copied == _draft && _editingReference is null ? "Copied Look" : "My Looks", compact ? 20 : 24);
-        heading.SizeFlagsHorizontal = SizeFlags.ExpandFill; top.AddChild(heading);
+        _lookName = new LineEdit { Text = _draftName, PlaceholderText = "Name this Look", MaxLength = 128, Theme = MockUi.Controls,
+            CustomMinimumSize = new(120,44), SizeFlagsHorizontal = SizeFlags.ExpandFill, Editable = !_readOnly,
+            AccessibilityName = "Look name", TooltipText = "Look name" };
+        _lookName.TextChanged += value => { _draftName = value; ValidateMockLook(); };
+        top.AddChild(_lookName);
+        var categories = new OptionButton { Theme = MockUi.Controls, CustomMinimumSize = new(compact ? 140 : 210,44),
+            Disabled = _readOnly, AccessibilityName = "Look category", TooltipText = "Look category" };
+        foreach (var c in _mock.Categories.Where(c => c.Id != AppearancePalette.Pinned))
+        {
+            categories.AddItem(c.Name); categories.SetItemMetadata(categories.ItemCount-1,c.Id);
+            if (c.Id == _draftCategory) categories.Select(categories.ItemCount-1);
+        }
+        categories.ItemSelected += index => _draftCategory = categories.GetItemMetadata((int)index).AsString();
+        top.AddChild(categories);
         if(_editingReference is not null)
         {
             var pin=MockUi.Button("save","Pin Look",()=>{});pin.Icon=AppearanceIcons.Texture("pin");pin.ToggleMode=true;
@@ -259,53 +278,64 @@ public partial class AppearanceManagement
             _saveLook = MockUi.Button("save", "Save Look", SaveMockLook); top.AddChild(_saveLook);
         }
         _lookEditor.AddChild(top);
-        var fields = new HBoxContainer(); fields.AddThemeConstantOverride("separation", 20);
-        var naming = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
-        if (!compact) naming.AddChild(MockUi.Label("Name", 18));
-        _lookName = new LineEdit { Text = _draftName, PlaceholderText = "Name this Look", MaxLength = 128, Theme = MockUi.Controls,
-            CustomMinimumSize = new(160,44), SizeFlagsHorizontal = SizeFlags.ExpandFill, Editable = !_readOnly, AccessibilityName = "Look name" };
-        _lookName.TextChanged += value => { _draftName = value; ValidateMockLook(); };
-        naming.AddChild(_lookName); fields.AddChild(naming);
-        var grouping = new VBoxContainer { CustomMinimumSize = new(compact ? 190 : 260,0) };
-        if (!compact) grouping.AddChild(MockUi.Label("Category",18));
-        var categories = new OptionButton { Theme = MockUi.Controls, CustomMinimumSize = new(0,44), Disabled = _readOnly, AccessibilityName = "Look category" };
-        foreach (var c in _mock.Categories.Where(c => c.Id != AppearancePalette.Pinned)) { categories.AddItem(c.Name); categories.SetItemMetadata(categories.ItemCount-1,c.Id); if (c.Id == _draftCategory) categories.Select(categories.ItemCount-1); }
-        categories.ItemSelected += index => _draftCategory = categories.GetItemMetadata((int)index).AsString();
-        grouping.AddChild(categories); fields.AddChild(grouping); _lookEditor.AddChild(fields);
-        var content = new HBoxContainer { SizeFlagsVertical = SizeFlags.ExpandFill }; content.AddThemeConstantOverride("separation",32); _lookEditor.AddChild(content);
-        var preview = new MockLookPreview
+
+        var workspace = new HBoxContainer { Name = "Workspace", SizeFlagsVertical = SizeFlags.ExpandFill };
+        workspace.AddThemeConstantOverride("separation", compact ? 16 : 28); _lookEditor.AddChild(workspace);
+        var inspection = new VBoxContainer { Name = "Inspection", SizeFlagsHorizontal = SizeFlags.ExpandFill, SizeFlagsStretchRatio = compact ? 1 : 1.15f };
+        inspection.AddThemeConstantOverride("separation", compact ? 6 : 12); workspace.AddChild(inspection);
+        _regionPreview = new MockLookPreview { Name = "RegionPreview", SizeFlagsVertical = SizeFlags.ExpandFill, CustomMinimumSize = new(compact ? 300 : 340,0) };
+        inspection.AddChild(_regionPreview);
+        _regionPreview.Configure(_draft, _mock, _previewCircular, _previewCeiling, compact);
+        _regionPreview.ShapeChanged += value => _previewCircular = value;
+        _regionPreview.CeilingChanged += value => _previewCeiling = value;
+        var dockScroll = new ScrollContainer { Name = "ComponentDock", HorizontalScrollMode = ScrollContainer.ScrollMode.Auto,
+            VerticalScrollMode = ScrollContainer.ScrollMode.Disabled, FollowFocus = true, CustomMinimumSize = new(0,compact ? 44 : 56) };
+        inspection.AddChild(dockScroll);
+        var dock = new HBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill, Alignment = BoxContainer.AlignmentMode.Center };
+        dock.AddThemeConstantOverride("separation", compact ? 2 : 8); dockScroll.AddChild(dock);
+        var group = new ButtonGroup();
+        foreach (var role in MockEditorRoles)
         {
-            CustomMinimumSize = new(compact ? 220 : Size.X < 1200 ? 360 : 500, compact ? 158 : 280),
-            SizeFlagsHorizontal = SizeFlags.ExpandFill,
-            SizeFlagsStretchRatio = compact ? .9f : 1.15f
-        };
-        content.AddChild(preview);
-        preview.Configure(_draft, _mock, _previewCircular, _previewCeiling, compact);
-        preview.ShapeChanged += value => _previewCircular = value;
-        preview.CeilingChanged += value => _previewCeiling = value;
-        var grid = new GridContainer { Columns = compact ? 2 : 1, SizeFlagsHorizontal = SizeFlags.ExpandFill, SizeFlagsVertical = SizeFlags.ShrinkCenter };
-        grid.AddThemeConstantOverride("h_separation",24); grid.AddThemeConstantOverride("v_separation",compact ? 4 : 12); content.AddChild(grid);
-        foreach (var role in RegionLook.Roles)
-        {
-            var row = new HBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill, CustomMinimumSize = new(0, compact ? 44 : 70) }; row.AddThemeConstantOverride("separation",12);
-            var icon = new TextureRect { Texture = AppearanceIcons.SubjectTexture(role == "exterior_wall" ? "wall" : role), CustomMinimumSize = new(26,26), ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize, StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered, SizeFlagsVertical = SizeFlags.ShrinkCenter };
-            if (!compact) row.AddChild(icon); else icon.Free();
-            var reference = DraftReference(role);
-            if (reference is not null && !compact) { var disc = MockUi.Disc(_mock.Entry(reference),_mock,compact ? 40 : 56); disc.MouseFilter = MouseFilterEnum.Ignore; row.AddChild(disc); }
-            var labels = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill, SizeFlagsVertical = SizeFlags.ShrinkCenter };
-            if (compact) labels.AddThemeConstantOverride("separation", 0);
-            labels.AddChild(MockUi.Label(MockRoleName(role),compact ? 14 : 17));
-            var name = MockUi.Label(reference is null ? "Choose a component" : MockData.Text(_mock.Entry(reference),"displayName"), compact ? 18 : 24);
-            name.TooltipText = name.Text; name.MouseFilter = MouseFilterEnum.Pass;
-            name.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis; name.CustomMinimumSize = new(80,0); labels.AddChild(name); row.AddChild(labels);
-            var edit = MockUi.Button("edit", "Choose " + MockRoleName(role).ToLowerInvariant(), () => { _pickerRole = role; BuildMockEditor(); }); edit.Disabled = _readOnly; edit.SizeFlagsVertical = SizeFlags.ShrinkCenter; row.AddChild(edit); grid.AddChild(row);
+            var button = MockUi.Button("layers", MockRoleName(role), () => SelectMockRole(role));
+            button.Name = "Role_" + role;
+            button.Icon = role switch {
+                "wall" => AppearanceIcons.SubjectTexture("region"), "exterior_wall" => AppearanceIcons.SubjectTexture("building"),
+                "columns" => AppearanceIcons.Texture("greek-temple"), "brackets" => AppearanceIcons.Texture("wood-beam"),
+                _ => AppearanceIcons.SubjectTexture(role) };
+            button.CustomMinimumSize = Vector2.One * (compact ? 44 : 56);
+            button.ToggleMode = true; button.ButtonGroup = group;
+            button.SetPressedNoSignal(role == _pickerRole);
+            _componentButtons[role] = button; dock.AddChild(button);
         }
-        if (!compact)
-        {
-            var hint = MockUi.Label(_readOnly ? "Application content is read-only. Compose a copy to change its components." : "Fill all five slots and name your Look to save it.",18);
-            _lookEditor.AddChild(hint);
-        }
+        _componentPane = new VBoxContainer { Name = "Components", SizeFlagsHorizontal = SizeFlags.ExpandFill };
+        _componentPane.AddThemeConstantOverride("separation",compact ? 4 : 10); workspace.AddChild(_componentPane);
+        BuildMockPicker();
+        RefreshMockEditorSelection();
         ValidateMockLook();
+    }
+    private void SelectMockRole(string role)
+    {
+        if (_pickerRole == role && _componentPane is not null) return;
+        _pickerRole = role;
+        _regionPreview?.InspectRole(role);
+        BuildMockPicker();
+        RefreshMockEditorSelection();
+    }
+    private void RefreshMockEditorSelection()
+    {
+        foreach (var (role,button) in _componentButtons)
+        {
+            var reference = DraftReference(role);
+            var choice = reference is null ? (role is "columns" or "brackets" ? "No styles available" : "Not selected") : MockData.Text(_mock.Entry(reference),"displayName");
+            button.TooltipText = button.AccessibilityName = MockRoleName(role) + " · " + choice;
+            button.SetPressedNoSignal(role == _pickerRole);
+        }
+        if (_componentChoice is not null)
+        {
+            var reference = DraftReference(_pickerRole);
+            _componentChoice.Text = reference is null ? "" : MockData.Text(_mock.Entry(reference),"displayName");
+            _componentChoice.TooltipText = _componentChoice.Text;
+        }
     }
     private void LayoutMockEditor()
     {
@@ -322,7 +352,7 @@ public partial class AppearanceManagement
         _lookEditor.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
     }
     private static string MockRoleName(string role) => role switch { "wall" => "Interior walls", "exterior_wall" => "Exterior walls", _ => char.ToUpperInvariant(role[0]) + role[1..] };
-    private string? DraftReference(string role) => role switch { "wall" => _draft.Wall, "exterior_wall" => _draft.ExteriorWall, "floor" => _draft.Floor, "ceiling" => _draft.Ceiling, _ => _draft.Foundation };
+    private string? DraftReference(string role) => role switch { "wall" => _draft.Wall, "exterior_wall" => _draft.ExteriorWall, "floor" => _draft.Floor, "ceiling" => _draft.Ceiling, "foundation" => _draft.Foundation, _ => null };
     private void ValidateMockLook()
     {
         if (_saveLook is not null && IsInstanceValid(_saveLook))
@@ -347,8 +377,7 @@ public partial class AppearanceManagement
         if(!IsVisibleInTree() || _lookEditor is null || !key.Pressed)return false;
         if(key.Keycode==Key.Escape)
         {
-            if(_pickerRole.Length>0){_pickerRole="";BuildMockEditor();}
-            else EndMockEdit();
+            EndMockEdit();
             return true;
         }
         if(key.Keycode!=Key.Tab)return false;
@@ -362,16 +391,23 @@ public partial class AppearanceManagement
     }
     internal void OpenMockPicker(string role)
     {
-        _pickerRole=role;
-        BuildMockEditor();
+        SelectMockRole(role);
     }
     private void BuildMockPicker()
     {
-        GetNode<Label>("Header/Content/Row/Titles/Title").Text="Choose "+MockRoleName(_pickerRole).ToLowerInvariant();
-        var back=MockUi.Button("back","Back to Look",()=>{_pickerRole="";BuildMockEditor();});
-        back.Name="PickerBack";
-        var header=GetNode<HBoxContainer>("Header/Content/Row");header.AddChild(back);header.MoveChild(back,0);
+        if (_componentPane is null) return;
+        MockUi.Clear(_componentPane);
+        var compact = Size.Y < 540;
+        var heading = new VBoxContainer(); heading.AddThemeConstantOverride("separation", 0);
+        _componentTitle = MockUi.Label(MockRoleName(_pickerRole),compact ? 22 : 28); heading.AddChild(_componentTitle);
+        _componentChoice = MockUi.Label("",compact ? 16 : 19);
+        _componentChoice.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
+        _componentChoice.Modulate = new Color(1,1,1,.7f); heading.AddChild(_componentChoice);
+        _componentPane.AddChild(heading);
         var gallery=GD.Load<PackedScene>("res://rookframe/ui/components/content/miniature_browser.tscn").Instantiate<Control>();
+        gallery.Name = "ComponentGallery";
+        // A local layout adapter makes the same native gallery fit a split pane.
+        gallery.SetScript(GD.Load<Script>("res://prototypes/saved-looks/inline_gallery.gd"));
         gallery.Theme=GD.Load<Theme>("res://rookframe/ui/theme/silkbound_theme.tres");
         if(OS.GetCmdlineUserArgs().Contains("--long") || TranslationServer.GetLocale().StartsWith("ja",StringComparison.Ordinal))
         {
@@ -379,42 +415,47 @@ public partial class AppearanceManagement
             var font=GD.Load<Font>("res://rookframe/ui/theme/locales/ja_regular.tres");
             foreach(var type in new[]{"RookframeBody","RookframeMeta","TooltipLabel"})gallery.Theme.SetFont("font",type,font);
         }
-        gallery.Set("paginated",true);
+        gallery.Set("paginated",!compact);
         gallery.Set("reduced_motion",OS.GetCmdlineUserArgs().Contains("--reduced-motion"));
-        _lookEditor!.AddChild(gallery);
+        _componentPane.AddChild(gallery);
         var entries=new Godot.Collections.Array<D>();
-        foreach(var entry in _entries.Where(e=>Text(e,"type")==((_pickerRole is "wall" or "exterior_wall")?"wall_style":"surface_finish")))
+        var componentType = _pickerRole is "wall" or "exterior_wall" ? "wall_style" : _pickerRole is "columns" or "brackets" ? "" : "surface_finish";
+        foreach(var entry in _entries.Where(e=>Text(e,"type")==componentType))
             entries.Add(new D { ["id"]=Reference(entry),["title"]=Text(entry,"displayName")+(OS.GetCmdlineUserArgs().Contains("--long")?" — северная галерея / 北の回廊":""),["package"]=Text(entry,"packageName"),["available"]=true });
         gallery.Connect("preview_requested",Callable.From<D,Control>((choice,target)=>
         {
             var entry=_mock.Entry(choice["id"].AsString());
-            // Bound gallery captions so long names cannot consume the 3D stage.
-            // The complete identity remains in the native accessible name and tooltip.
             var card=target.GetParent().GetParent().GetParent<Button>();
             var caption=card.GetNode<Label>("Content/Copy/Title");
             caption.MaxLinesVisible=2;caption.TextOverrunBehavior=TextServer.OverrunBehavior.TrimWordEllipsis;
-            var source=card.GetNode<Label>("Content/Copy/Package");
-            source.MaxLinesVisible=1;source.TextOverrunBehavior=TextServer.OverrunBehavior.TrimEllipsis;
+            caption.AddThemeFontSizeOverride("font_size",compact ? 16 : 18);
+            // Every fixture component has the same source; retain it in the tooltip.
+            card.GetNode<Label>("Content/Copy/Package").Hide();
             card.TooltipText=choice["title"].AsString()+"\n"+choice["package"].AsString();
             var preview=GD.Load<PackedScene>(MockUi.Ui+"TabletopContentPreview.tscn").Instantiate<TabletopContentPreview>();
             target.AddChild(preview);preview.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
-            if((_pickerRole is "wall" or "exterior_wall"))preview.SetMockWall(entry,_mock);
+            if(_pickerRole is "wall" or "exterior_wall")preview.SetMockWall(entry,_mock);
             else preview.SetMockMaterialSphere(entry,_mock);
         }));
         gallery.Connect("selection_changed",Callable.From<D>(choice=>
         {
-            if(!choice.ContainsKey("id"))return;
+            if(_readOnly || !choice.ContainsKey("id"))return;
             var reference=choice["id"].AsString();
-            _draft=_pickerRole switch { "wall"=>_draft with {Wall=reference},"exterior_wall"=>_draft with {ExteriorWall=reference},"floor"=>_draft with {Floor=reference},"ceiling"=>_draft with {Ceiling=reference},_=>_draft with {Foundation=reference} };
-            // Let the native gallery finish its release signal before replacing it.
-            Callable.From(()=>{_pickerRole="";BuildMockEditor();}).CallDeferred();
+            _draft=_pickerRole switch { "wall"=>_draft with {Wall=reference},"exterior_wall"=>_draft with {ExteriorWall=reference},"floor"=>_draft with {Floor=reference},"ceiling"=>_draft with {Ceiling=reference},"foundation"=>_draft with {Foundation=reference},_=>_draft };
+            _regionPreview!.UpdateLook(_draft);
+            RefreshMockEditorSelection();
+            ValidateMockLook();
         }));
         gallery.Call("configure",entries,DraftReference(_pickerRole)??"",new D {
-            ["search"]="Find a "+((_pickerRole is "wall" or "exterior_wall")?"wall style":"material")+"…",["no_match"]="No matching components",["empty"]="No components available",["previous"]="",["next"]="" });
+            ["search"]="Find a "+(_pickerRole is "wall" or "exterior_wall"?"wall style":_pickerRole=="columns"?"column":_pickerRole=="brackets"?"bracket":"material")+"…",
+            ["no_match"]="No matching components",["empty"]=_pickerRole is "columns" or "brackets" ? "No "+(_pickerRole=="columns"?"column":"bracket")+" styles available" : "No components available",
+            ["previous"]="",["next"]="" });
         foreach(var (path,icon,label) in new[]{("Previous","chevron-left","Previous page"),("Next","chevron-right","Next page")})
         {
             var button=gallery.GetNode<Button>("Pager/"+path);button.Icon=MockUi.Icon(icon);
             button.TooltipText=button.AccessibilityName=label;button.CustomMinimumSize=new(44,44);button.ExpandIcon=true;button.AddThemeConstantOverride("icon_max_width",22);
         }
+        if (_readOnly)
+            foreach (var card in gallery.GetNode<GridContainer>("Results/Rows").GetChildren().OfType<Button>()) card.Disabled=true;
     }
 }
