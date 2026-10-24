@@ -1,5 +1,9 @@
 extends "res://rookframe/ui/components/content/miniature_browser.gd"
 ## Throwaway split-pane sizing; native search, selection, cards and paging stay intact.
+func _filter(query: String) -> void:
+	super._filter(query)
+	get_node(^"Results").visible = _state == "ready" and not _matches.is_empty()
+
 func _arrange() -> void:
 	if not is_inside_tree(): return
 	var results := get_node(^"Results") as ScrollContainer

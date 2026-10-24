@@ -418,6 +418,8 @@ public partial class AppearanceManagement
         gallery.Set("paginated",!compact);
         gallery.Set("reduced_motion",OS.GetCmdlineUserArgs().Contains("--reduced-motion"));
         _componentPane.AddChild(gallery);
+        gallery.GetNode<Label>("Status").AddThemeFontSizeOverride("font_size",compact ? 16 : 19);
+        gallery.GetNode<Label>("Pager/Range").AddThemeFontSizeOverride("font_size",18);
         var entries=new Godot.Collections.Array<D>();
         var componentType = _pickerRole is "wall" or "exterior_wall" ? "wall_style" : _pickerRole is "columns" or "brackets" ? "" : "surface_finish";
         foreach(var entry in _entries.Where(e=>Text(e,"type")==componentType))
