@@ -51,7 +51,9 @@ The tabletop is a flat synthetic surface using existing appearance resources.
   Manager; the swatch and Clear remain. A Foundation-only difference is not a match.
   A recognized copy shows the matching Look's name below the swatch; an unsaved Look
   has no caption. Atomic copies show their Content name. The existing scope badge
-  identifies the copied subject; generic “Room style”/“Building style” captions are not used.
+  identifies the copied subject, presented as a small attached brass medallion using
+  the native palette rim/leather textures and unchanged subject glyph. Generic
+  “Room style”/“Building style” captions are not used.
 - Painting's book opens the Manager. Looks supports source groups, search,
   categories, composition, component selection, editing, pinning and deletion.
   The category pencil opens category settings and membership controls.

@@ -9,6 +9,7 @@ public partial class LooksMock : Control
     private AppearanceManagement _manager=null!;
     private PaintingHud _painting=null!;
     private PaintingCopyIndicator _copy=null!;
+    private Control _copyScope=null!;
     private RegionBrushHud _drawing=null!;
     private PanelContainer _drawingSurface=null!;
     private ColorRect _drawingDivider=null!;
@@ -73,6 +74,7 @@ public partial class LooksMock : Control
         _painting.ManagementRequested+=()=>OpenManager(); _painting.HistoryRequested+=History;
         _copy=GD.Load<PackedScene>(MockUi.Ui+"PaintingCopyIndicator.tscn").Instantiate<PaintingCopyIndicator>(); AddChild(_copy); _copy.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         _copy.MouseFilter=MouseFilterEnum.Ignore;
+        BuildCopyScope();
         _saveCopy=MockUi.Button("save","Save copied Look",()=>OpenManager(true)); AddChild(_saveCopy);
         _clearCopy=MockUi.Button("close","Clear copied appearance",ClearCopy); AddChild(_clearCopy);
         _wheel=GD.Load<PackedScene>(MockUi.Ui+"RegionPalette.tscn").Instantiate<RegionPalette>(); AddChild(_wheel); _wheel.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect); _wheel.Hide();
@@ -108,6 +110,18 @@ public partial class LooksMock : Control
     {
         _paintingMode=paint; _pending=false; _hover=null; _wheel?.Close(); Present();
     }
+    private void BuildCopyScope()
+    {
+        _copyScope=new Control {Name="CopyScope",MouseFilter=MouseFilterEnum.Pass,ZIndex=2,TextureFilter=TextureFilterEnum.LinearWithMipmaps};_copy.AddChild(_copyScope);
+        foreach(var texture in new[]{"category","rim"})
+        {
+            var layer=new TextureRect {Name=texture,Texture=_copy.GetThemeIcon(texture,"region_palette"),ExpandMode=TextureRect.ExpandModeEnum.IgnoreSize,StretchMode=TextureRect.StretchModeEnum.Scale,MouseFilter=MouseFilterEnum.Ignore};
+            _copyScope.AddChild(layer);layer.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
+        }
+        var glyph=new TextureRect {Name="Glyph",ExpandMode=TextureRect.ExpandModeEnum.IgnoreSize,StretchMode=TextureRect.StretchModeEnum.KeepAspectCentered,MouseFilter=MouseFilterEnum.Ignore,
+            SelfModulate=_copy.GetNode<Control>("Badge").GetThemeColor("icon_normal_color","RookframeManagedControl")};
+        _copyScope.AddChild(glyph);
+    }
     private void Present()
     {
         if(_painting is null)return;
@@ -122,6 +136,13 @@ public partial class LooksMock : Control
         copyName.TextOverrunBehavior=TextServer.OverrunBehavior.TrimEllipsis;
         copyName.MouseFilter=MouseFilterEnum.Pass;
         copyName.Visible=copyName.Text.Length>0;
+        _copy.GetNode<Control>("Badge").Hide();
+        _copyScope.Visible=_data.Copied is not null||_data.CopiedAtomic is not null;
+        if(_copyScope.Visible)
+        {
+            _copyScope.GetNode<TextureRect>("Glyph").Texture=AppearanceIcons.SubjectTexture(_data.CopiedSubject);
+            _copyScope.TooltipText=_copyScope.AccessibilityName="Copied from "+(_data.CopiedSubject=="region"?"room":_data.CopiedSubject);
+        }
         _saveCopy.Visible=_paintingMode&&_data.Copied is not null&&!_data.CopiedSaved;
         _clearCopy.Visible=_paintingMode&&(_data.Copied is not null||_data.CopiedAtomic is not null);
         _builder.GetNode<Button>("RailPanel/Tools/RoomsEntry").SetPressedNoSignal(!_paintingMode);
@@ -393,6 +414,9 @@ public partial class LooksMock : Control
         }
         var buffer=_copy.GetNode<Control>("Buffer");_saveCopy.Position=buffer.Position+new Vector2(-36,-8);_clearCopy.Position=buffer.Position+new Vector2(-42,38);
         var copyName=_copy.GetNode<Label>("Scope");copyName.Position=buffer.Position+new Vector2(-12,buffer.Size.Y-2);copyName.Size=new(buffer.Size.X+24,22);
+        _copyScope.Size=Vector2.One*(compact?28:32)*RegionPaletteButton.ArtworkScale;
+        _copyScope.Position=buffer.Position+buffer.Size*new Vector2(.85f,.74f)-_copyScope.Size/2;
+        var scopeGlyph=_copyScope.GetNode<TextureRect>("Glyph");scopeGlyph.Size=Vector2.One*(compact?16:18);scopeGlyph.Position=(_copyScope.Size-scopeGlyph.Size)/2;
         for(var i=0;i<_roomTargets.Count;i++){var rect=RoomRect(i);_roomTargets[i].Position=new(rect.GetCenter().X-22,rect.Position.Y-58);_roomTargets[i].Visible=!_pending&&i<(_rooms.Count>2?1:_rooms.Count);}
         _buildingTarget.Position=new(Size.X*.43f-(_rooms.Count>2?80:22),Math.Max(10,RoomRect(0).Position.Y-110));
         if(_stripMobile!=compact || (_pending && _stripRenderedCapacity!=StripCapacity())){RenderStrip();}
