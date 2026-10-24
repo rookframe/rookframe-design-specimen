@@ -87,6 +87,9 @@ public partial class LooksMock : Control
         if(args.Contains("--strip")) Callable.From(()=>BeginFootprint("Rectangle")).CallDeferred();
         if(args.Contains("--compose")) Callable.From(()=>{OpenManager();_manager.EditMockLook();}).CallDeferred();
         if(args.Contains("--edit")) Callable.From(()=>{OpenManager();var e=_data.AllLooks.First(e=>MockData.Text(e,"packageId")==MockData.Personal);_manager.EditMockLook(_data.Look(e),MockData.Ref(e));}).CallDeferred();
+        var picker=args.FirstOrDefault(a=>a.StartsWith("--picker-",StringComparison.Ordinal));
+        if(picker is not null && RegionLook.Roles.Contains(picker[9..]))
+            Callable.From(()=>{OpenManager();_manager.EditMockLook(_rooms[0]);_manager.OpenMockPicker(picker[9..]);}).CallDeferred();
         if(args.Contains("--capture")) CaptureLater(args);
     }
     private void Mode(bool paint)

@@ -41,6 +41,11 @@ The tabletop is a flat synthetic surface using existing appearance resources.
   categories, composition, component selection, editing, pinning and deletion.
   The category pencil opens category settings and membership controls.
   Built-in Looks can be inspected and copied, not edited.
+- The component chooser instances the UI Kit miniature gallery. Wall cards reuse
+  the painter’s assembled 3D sample, including the full-height Surface and Top placement. Floor, ceiling and foundation cards use
+  a stock SphereMesh with the actual surface material, in the application's
+  existing 3D preview world. Native search, selection and paging remain available;
+  choosing a card returns to the Look, while Back preserves the draft.
 - Painting → Paint → room/building icon opens the unchanged wheel.
 
 All state resets when the mock closes. No 3D room gesture is simulated.
@@ -50,7 +55,9 @@ Unrelated toolbar routes are disabled. The mock is not a production patch.
 
 Pass Godot arguments to `run.sh`, for example `--resolution 844x390`.
 After `--`, fixture flags include `--manager`, `--copy`, `--strip`, `--compose`,
-`--edit`, `--saved-copy`, `--long`. `--saved-copy --manager` reproduces the saved
+`--edit`, `--saved-copy`, `--long`. The component routes are `--picker-wall`,
+`--picker-floor`, `--picker-ceiling` and `--picker-foundation`. `--long` adds long
+multilingual component captions; `--reduced-motion` disables gallery page motion. `--saved-copy --manager` reproduces the saved
 copy collection state used for the Manager review.
 
 `--capture NAME --quit-after-capture` captures the native viewport after setup;
