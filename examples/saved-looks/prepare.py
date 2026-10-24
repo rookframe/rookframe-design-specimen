@@ -78,4 +78,17 @@ print(project)
 look_file = project / 'rookframe/application/world/RegionLook.cs'
 original = run('git', '-C', str(repository('godot')), 'show', PINS['application'] + ':rookframe/rookframe/application/world/RegionLook.cs', text=True)
 original = original.replace('        var key = ContentReference.Parse(reference);', '        if (MockData.TryLook(reference, out var mockLook)) return mockLook;\n        var key = ContentReference.Parse(reference);')
+# Five-slot Look adapter for this throwaway runtime only. Native wall-face rendering
+# and geometry remain the exact pinned application implementation.
+original = original.replace('internal sealed record RegionLook(', 'internal sealed partial record RegionLook(')
+original = original.replace('string? Ceiling = null, string? Foundation = null)', 'string? Ceiling = null, string? Foundation = null, string? ExteriorWall = null)')
+original = original.replace('["wall", "floor", "ceiling", "foundation"]', '["wall", "exterior_wall", "floor", "ceiling", "foundation"]')
+start = original.index('    internal RoomDraft Apply(RoomDraft plan)')
+end = original.index('    internal static RegionLook Pickup(RoomDraft plan)', start)
+original = original[:start] + '    internal RoomDraft Apply(RoomDraft plan) => ApplyMockWallFaces(plan);\n\n' + original[end:]
+original = original.replace('add("wall", plan.Appearance(RoomDraft.WallSurface', 'add(MockInteriorFace(wall.Boundary, face) ? "wall" : "exterior_wall", plan.Appearance(RoomDraft.WallSurface')
+original = original.replace('prevailing("ceiling"), prevailing("foundation"));', 'prevailing("ceiling"), prevailing("foundation"), prevailing("exterior_wall"));')
+original = original.replace('new[] { Wall, Floor, Ceiling, Foundation }', 'new[] { Wall, ExteriorWall, Floor, Ceiling, Foundation }')
+original = original.replace('read("ceiling"), read("foundation"));', 'read("ceiling"), read("foundation"), read("exterior_wall") ?? read("wall"));')
+original = original.replace('pair.Key.AsString() == "wall"', 'pair.Key.AsString() is "wall" or "exterior_wall"')
 look_file.write_text(original)

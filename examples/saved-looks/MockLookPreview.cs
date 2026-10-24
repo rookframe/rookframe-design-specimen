@@ -11,7 +11,7 @@ public partial class MockLookPreview : VBoxContainer
     internal void Configure(RegionLook look, MockData data, bool circular, bool ceiling, bool compact)
     {
         AddThemeConstantOverride("separation", 6);
-        var complete = look.Encode().Count == 4;
+        var complete = look.Encode().Count == 5;
         var stage = GD.Load<PackedScene>(MockUi.Ui + "TabletopContentPreview.tscn")
             .Instantiate<TabletopContentPreview>();
         stage.CustomMinimumSize = new(0, compact ? 108 : 230);
@@ -66,11 +66,11 @@ public partial class MockLookPreview : VBoxContainer
         roof.ToggleMode = true;
         roof.Disabled = !complete;
         roof.SetPressedNoSignal(ceiling);
-        roof.TooltipText = roof.AccessibilityName = ceiling ? "Hide ceiling" : "Show ceiling";
+        roof.TooltipText = roof.AccessibilityName = ceiling ? "Show interior" : "Show exterior and ceiling";
         roof.Toggled += shown =>
         {
             ceiling = shown;
-            roof.TooltipText = roof.AccessibilityName = shown ? "Hide ceiling" : "Show ceiling";
+            roof.TooltipText = roof.AccessibilityName = shown ? "Show interior" : "Show exterior and ceiling";
             CeilingChanged?.Invoke(shown);
             if (complete) stage.SetMockRegion(look, data, circular, ceiling);
         };

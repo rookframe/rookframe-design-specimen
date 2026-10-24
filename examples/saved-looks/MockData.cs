@@ -34,7 +34,7 @@ internal sealed class MockData
                 Preferences.Palette.Include(subject, category, Ref(e), true);
             }
         }
-        var original = BuiltIn("Tavern");
+        var original = BuiltIn("Tavern") with { ExteriorWall = Source("rough-stone-wall") };
         Save("The Copper Kettle", original with { Floor = Source("oak-planks") }, Categories[2].Id);
         Save("Lower crypt", BuiltIn("Dungeon"), Categories[3].Id);
         Save("Sunlit hall", BuiltIn("Castle") with { Floor = Source("oak-planks") }, Categories[3].Id);

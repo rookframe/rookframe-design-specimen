@@ -15,13 +15,14 @@ public partial class TabletopContentPreview
 
     internal void SetMockRegion(RegionLook look, MockData data, bool circular, bool ceiling)
     {
-        var key = string.Join("|", circular, look.Wall, look.Floor, look.Ceiling, look.Foundation);
+        var key = string.Join("|", circular, look.Wall, look.ExteriorWall, look.Floor, look.Ceiling, look.Foundation);
         if (!_mockRegions.TryGetValue(key, out var model))
         {
             var plan = new RoomDraft(Transform3D.Identity, new(-3, -2.4f, 6, 4.8f),
                 look.Wall!, look.Floor!, look.Ceiling!, .2, 0, 2.8,
                 Curve: circular ? new RoomCurve("Circle", Vector2.Zero, Vector2.One * 2.8f) : null,
                 FoundationThickness: .4, Foundation: look.Foundation!);
+            plan = look.Apply(plan);
             var shell = RoomShell.Build(plan, data.Content);
             var root = new Node3D { Name = circular ? "CircularRegion" : "RectangularRegion" };
             var structure = new MeshInstance3D { Mesh = shell.Mesh };
@@ -41,6 +42,7 @@ public partial class TabletopContentPreview
                 walls.Add(material);
             }
             bind(structure, 2);
+            for (var surface = 4; surface < shell.Mesh.GetSurfaceCount(); surface++) bind(structure, surface);
             for (var surface = 0; surface < (decoration.Mesh?.GetSurfaceCount() ?? 0); surface++) bind(decoration, surface);
             _presentation!.AddChild(root);
             model = new(root, shell, structure, caps, roof, walls.ToArray());

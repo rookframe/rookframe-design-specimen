@@ -34,7 +34,7 @@ public partial class LooksMock : Control
 
     public override void _Ready()
     {
-        _data=new(); _rooms.Add(_data.BuiltIn("Tavern") with { Ceiling=MockData.Source("dark-stone-tiles") }); _rooms.Add(_data.BuiltIn("Castle"));
+        _data=new(); _rooms.Add(_data.BuiltIn("Tavern") with { Ceiling=MockData.Source("dark-stone-tiles"), ExteriorWall=MockData.Source("rough-stone-wall") }); _rooms.Add(_data.BuiltIn("Castle"));
         _board=new MockTabletop { Name="TabletopFixture", MouseFilter=MouseFilterEnum.Stop, OwnerMock=this };
         AddChild(_board); _board.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         // Detach the actual authored rails before their host owner enters the tree.
@@ -147,7 +147,8 @@ public partial class LooksMock : Control
             {
                 if(subject is "region" or "building")
                 {
-                    _data.Copied=subject=="building"?RegionLook.Pickup(_rooms.Select(Plan),r=>MockData.Text(_data.Entry(r),"displayName")):_rooms[index];
+                    _data.Copied=subject=="building"?RegionLook.Pickup(_rooms.Select(Plan),r=>MockData.Text(_data.Entry(r),"displayName")):RegionLook.Pickup([Plan(_rooms[index])],r=>MockData.Text(_data.Entry(r),"displayName"));
+                    _data.Copied = _data.Copied with { Foundation = null };
                     _data.CopiedSubject=subject;
                     _copy.SetBuffer(new(Look:_data.Copied),subject,_data.Content);
                 }
@@ -164,9 +165,9 @@ public partial class LooksMock : Control
         }
         _wheel.Open(new("fixture-"+index,subject,Building:subject=="building"),RoomRect(index).GetCenter(),Plan(_rooms[index]),_data.Entries,_data.Content,
             paint=>{_hover=paint?.Look??(paint is null?null:_rooms[index] with {Floor=paint.Reference});_board.QueueRedraw();},
-            paint=>{Remember();foreach(var targetIndex in subject=="building" ? Enumerable.Range(0,_rooms.Count) : new[]{index}){var after=paint.Apply(Plan(_rooms[targetIndex]));_rooms[targetIndex]=new(after.Wall,after.Floor,after.Ceiling,after.Foundation);}_hover=null;Present();},_data.Preferences);
+            paint=>{Remember();foreach(var targetIndex in subject=="building" ? Enumerable.Range(0,_rooms.Count) : new[]{index}){var after=paint.Apply(Plan(_rooms[targetIndex]));_rooms[targetIndex]=RegionLook.Pickup(after);}_hover=null;Present();},_data.Preferences);
     }
-    private static RoomDraft Plan(RegionLook l)=>new(Transform3D.Identity,new(0,0,5,4),l.Wall!,l.Floor!,l.Ceiling!,.2,0,2.8,Foundation:l.Foundation!);
+    private static RoomDraft Plan(RegionLook l)=>l.Apply(new RoomDraft(Transform3D.Identity,new(0,0,5,4),l.Wall!,l.Floor!,l.Ceiling!,.2,0,2.8,Foundation:l.Foundation!));
     private void ClearCopy(){_data.Copied=null;_data.CopiedAtomic=null;_copy.ClearBuffer();_manager.RefreshMockCopy();Present();}
     internal void OpenManager(bool copied=false)
     {

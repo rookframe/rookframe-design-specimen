@@ -284,24 +284,25 @@ public partial class AppearanceManagement
         preview.ShapeChanged += value => _previewCircular = value;
         preview.CeilingChanged += value => _previewCeiling = value;
         var grid = new GridContainer { Columns = compact ? 2 : 1, SizeFlagsHorizontal = SizeFlags.ExpandFill, SizeFlagsVertical = SizeFlags.ShrinkCenter };
-        grid.AddThemeConstantOverride("h_separation",24); grid.AddThemeConstantOverride("v_separation",compact ? 6 : 18); content.AddChild(grid);
+        grid.AddThemeConstantOverride("h_separation",24); grid.AddThemeConstantOverride("v_separation",compact ? 4 : 12); content.AddChild(grid);
         foreach (var role in RegionLook.Roles)
         {
-            var row = new HBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill, CustomMinimumSize = new(0, compact ? 70 : 84) }; row.AddThemeConstantOverride("separation",12);
-            var icon = new TextureRect { Texture = AppearanceIcons.SubjectTexture(role), CustomMinimumSize = new(26,26), ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize, StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered, SizeFlagsVertical = SizeFlags.ShrinkCenter };
+            var row = new HBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill, CustomMinimumSize = new(0, compact ? 44 : 70) }; row.AddThemeConstantOverride("separation",12);
+            var icon = new TextureRect { Texture = AppearanceIcons.SubjectTexture(role == "exterior_wall" ? "wall" : role), CustomMinimumSize = new(26,26), ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize, StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered, SizeFlagsVertical = SizeFlags.ShrinkCenter };
             if (!compact) row.AddChild(icon); else icon.Free();
             var reference = DraftReference(role);
             if (reference is not null && !compact) { var disc = MockUi.Disc(_mock.Entry(reference),_mock,compact ? 40 : 56); disc.MouseFilter = MouseFilterEnum.Ignore; row.AddChild(disc); }
             var labels = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill, SizeFlagsVertical = SizeFlags.ShrinkCenter };
-            labels.AddChild(MockUi.Label(char.ToUpperInvariant(role[0]) + role[1..],17));
-            var name = MockUi.Label(reference is null ? "Choose a component" : MockData.Text(_mock.Entry(reference),"displayName"), compact ? 20 : 26);
+            if (compact) labels.AddThemeConstantOverride("separation", 0);
+            labels.AddChild(MockUi.Label(MockRoleName(role),compact ? 14 : 17));
+            var name = MockUi.Label(reference is null ? "Choose a component" : MockData.Text(_mock.Entry(reference),"displayName"), compact ? 18 : 24);
             name.TooltipText = name.Text; name.MouseFilter = MouseFilterEnum.Pass;
             name.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis; name.CustomMinimumSize = new(80,0); labels.AddChild(name); row.AddChild(labels);
-            var edit = MockUi.Button("edit", "Choose " + role, () => { _pickerRole = role; BuildMockEditor(); }); edit.Disabled = _readOnly; edit.SizeFlagsVertical = SizeFlags.ShrinkCenter; row.AddChild(edit); grid.AddChild(row);
+            var edit = MockUi.Button("edit", "Choose " + MockRoleName(role).ToLowerInvariant(), () => { _pickerRole = role; BuildMockEditor(); }); edit.Disabled = _readOnly; edit.SizeFlagsVertical = SizeFlags.ShrinkCenter; row.AddChild(edit); grid.AddChild(row);
         }
         if (!compact)
         {
-            var hint = MockUi.Label(_readOnly ? "Application content is read-only. Compose a copy to change its components." : "Fill all four slots and name your Look to save it.",18);
+            var hint = MockUi.Label(_readOnly ? "Application content is read-only. Compose a copy to change its components." : "Fill all five slots and name your Look to save it.",18);
             _lookEditor.AddChild(hint);
         }
         ValidateMockLook();
@@ -320,13 +321,14 @@ public partial class AppearanceManagement
         }
         _lookEditor.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
     }
-    private string? DraftReference(string role) => role switch { "wall" => _draft.Wall, "floor" => _draft.Floor, "ceiling" => _draft.Ceiling, _ => _draft.Foundation };
+    private static string MockRoleName(string role) => role switch { "wall" => "Interior walls", "exterior_wall" => "Exterior walls", _ => char.ToUpperInvariant(role[0]) + role[1..] };
+    private string? DraftReference(string role) => role switch { "wall" => _draft.Wall, "exterior_wall" => _draft.ExteriorWall, "floor" => _draft.Floor, "ceiling" => _draft.Ceiling, _ => _draft.Foundation };
     private void ValidateMockLook()
     {
         if (_saveLook is not null && IsInstanceValid(_saveLook))
         {
             _saveLook.Disabled = _draftName.Trim().Length == 0 || RegionLook.Roles.Any(r => DraftReference(r) is null);
-            _saveLook.TooltipText = _saveLook.Disabled ? "Fill all four slots and name this Look" : "Save Look";
+            _saveLook.TooltipText = _saveLook.Disabled ? "Fill all five slots and name this Look" : "Save Look";
         }
     }
     private void SaveMockLook()
@@ -365,7 +367,7 @@ public partial class AppearanceManagement
     }
     private void BuildMockPicker()
     {
-        GetNode<Label>("Header/Content/Row/Titles/Title").Text="Choose "+_pickerRole;
+        GetNode<Label>("Header/Content/Row/Titles/Title").Text="Choose "+MockRoleName(_pickerRole).ToLowerInvariant();
         var back=MockUi.Button("back","Back to Look",()=>{_pickerRole="";BuildMockEditor();});
         back.Name="PickerBack";
         var header=GetNode<HBoxContainer>("Header/Content/Row");header.AddChild(back);header.MoveChild(back,0);
@@ -381,7 +383,7 @@ public partial class AppearanceManagement
         gallery.Set("reduced_motion",OS.GetCmdlineUserArgs().Contains("--reduced-motion"));
         _lookEditor!.AddChild(gallery);
         var entries=new Godot.Collections.Array<D>();
-        foreach(var entry in _entries.Where(e=>Text(e,"type")==(_pickerRole=="wall"?"wall_style":"surface_finish")))
+        foreach(var entry in _entries.Where(e=>Text(e,"type")==((_pickerRole is "wall" or "exterior_wall")?"wall_style":"surface_finish")))
             entries.Add(new D { ["id"]=Reference(entry),["title"]=Text(entry,"displayName")+(OS.GetCmdlineUserArgs().Contains("--long")?" — северная галерея / 北の回廊":""),["package"]=Text(entry,"packageName"),["available"]=true });
         gallery.Connect("preview_requested",Callable.From<D,Control>((choice,target)=>
         {
@@ -396,19 +398,19 @@ public partial class AppearanceManagement
             card.TooltipText=choice["title"].AsString()+"\n"+choice["package"].AsString();
             var preview=GD.Load<PackedScene>(MockUi.Ui+"TabletopContentPreview.tscn").Instantiate<TabletopContentPreview>();
             target.AddChild(preview);preview.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
-            if(_pickerRole=="wall")preview.SetMockWall(entry,_mock);
+            if((_pickerRole is "wall" or "exterior_wall"))preview.SetMockWall(entry,_mock);
             else preview.SetMockMaterialSphere(entry,_mock);
         }));
         gallery.Connect("selection_changed",Callable.From<D>(choice=>
         {
             if(!choice.ContainsKey("id"))return;
             var reference=choice["id"].AsString();
-            _draft=_pickerRole switch { "wall"=>_draft with {Wall=reference},"floor"=>_draft with {Floor=reference},"ceiling"=>_draft with {Ceiling=reference},_=>_draft with {Foundation=reference} };
+            _draft=_pickerRole switch { "wall"=>_draft with {Wall=reference},"exterior_wall"=>_draft with {ExteriorWall=reference},"floor"=>_draft with {Floor=reference},"ceiling"=>_draft with {Ceiling=reference},_=>_draft with {Foundation=reference} };
             // Let the native gallery finish its release signal before replacing it.
             Callable.From(()=>{_pickerRole="";BuildMockEditor();}).CallDeferred();
         }));
         gallery.Call("configure",entries,DraftReference(_pickerRole)??"",new D {
-            ["search"]="Find a "+(_pickerRole=="wall"?"wall style":"material")+"…",["no_match"]="No matching components",["empty"]="No components available",["previous"]="",["next"]="" });
+            ["search"]="Find a "+((_pickerRole is "wall" or "exterior_wall")?"wall style":"material")+"…",["no_match"]="No matching components",["empty"]="No components available",["previous"]="",["next"]="" });
         foreach(var (path,icon,label) in new[]{("Previous","chevron-left","Previous page"),("Next","chevron-right","Next page")})
         {
             var button=gallery.GetNode<Button>("Pager/"+path);button.Icon=MockUi.Icon(icon);
