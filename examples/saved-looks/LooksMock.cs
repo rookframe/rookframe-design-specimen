@@ -195,6 +195,8 @@ public partial class LooksMock : Control
     }
     private void RenderStrip()
     {
+        if(!_data.Categories.Any(c=>c.Id==_stripCategory))
+            _stripCategory=_data.Categories.First().Id;
         _renderingTabs=true;
         _tabs.ClearTabs();
         foreach(var category in _data.Categories)

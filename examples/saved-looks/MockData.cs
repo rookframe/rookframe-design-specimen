@@ -67,7 +67,7 @@ internal sealed class MockData
         foreach (var subject in new[] { "region", "building" })
         {
             var state = Preferences.For(subject, Entries.Select(v => v.AsGodotDictionary()));
-            Preferences.Palette.Include(subject, "all", reference, true);
+            if(state.Categories.Any(c=>c.Id=="all")) Preferences.Palette.Include(subject, "all", reference, true);
             var match = state.Categories.FirstOrDefault(c => c.Id == category || c.Name == Categories.FirstOrDefault(x => x.Id == category)?.Name);
             if (match is not null) Preferences.Palette.Include(subject, match.Id, reference, true);
         }
