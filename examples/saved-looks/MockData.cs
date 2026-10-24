@@ -83,7 +83,11 @@ internal sealed class MockData
                 Preferences.Palette.Include(subject, c.Id, reference, false);
         Changed?.Invoke();
     }
-    internal bool CopiedSaved => Copied is not null && AllLooks.Any(e => Look(e) == Copied);
+    // RegionLook equality compares the five component references, not catalogue names or organization.
+    internal D? CopiedMatch => Copied is null ? null : AllLooks.FirstOrDefault(e => Look(e) == Copied);
+    internal bool CopiedSaved => CopiedMatch is not null;
+    internal string CopiedName => CopiedMatch is { } match ? Display(match)
+        : CopiedAtomic is { } reference ? Text(Entry(reference), "displayName") : "";
     internal static bool TryLook(string reference, out RegionLook look)
     {
         look = null!;

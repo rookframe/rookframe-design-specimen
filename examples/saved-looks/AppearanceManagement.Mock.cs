@@ -78,7 +78,7 @@ public partial class AppearanceManagement
         _copiedRow.AddChild(MockUi.LookDisc(_mock.Copied, _mock, 48));
         var text = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill, SizeFlagsVertical = SizeFlags.ShrinkCenter };
         text.AddChild(MockUi.Label("Copied Look", 23));
-        text.AddChild(MockUi.Label(_mock.CopiedSaved ? "Already in your collection" : "Not saved", 17));
+        text.AddChild(MockUi.Label("Not saved", 17));
         _copiedRow.AddChild(text);
         if (!_mock.CopiedSaved) _copiedRow.AddChild(MockUi.Button("save", "Save copied Look", () => EditMockLook(_mock.Copied)));
     }

@@ -43,9 +43,15 @@ The tabletop is a flat synthetic surface using existing appearance resources.
   or category clears the tentative choice; Cancel discards the provisional footprint.
   The builder/right rails hide while this palette is open. Escape/cross cancels on
   either layout. Creation restores the drawing HUD; undo/redo/delete use local history.
-- Painting → Copy → room/building icon copies its Look components. Clicking the floor
+- Painting → Copy → room/building icon copies all five Look components, including Foundation. Clicking the floor
   copies an atomic finish. The top-right swatch has Clear; unsaved Looks also have
-  Save. Save opens the Manager with the copied components.
+  Save. Save opens the Manager with the complete copied recipe. Recognition compares
+  all five component Content References against the existing Look collection, ignoring
+  names, categories and pins. A match hides Save and the extra copied-Look entry in
+  Manager; the swatch and Clear remain. A Foundation-only difference is not a match.
+  A recognized copy shows the matching Look's name below the swatch; an unsaved Look
+  has no caption. Atomic copies show their Content name. The existing scope badge
+  identifies the copied subject; generic “Room style”/“Building style” captions are not used.
 - Painting's book opens the Manager. Looks supports source groups, search,
   categories, composition, component selection, editing, pinning and deletion.
   The category pencil opens category settings and membership controls.
@@ -59,7 +65,7 @@ The tabletop is a flat synthetic surface using existing appearance resources.
   The two wall slots use the same gallery independently. Legacy single-wall Looks
   initialize both slots from that style. Copy reuses the native prevailing-style
   rule separately for Region-relative interior and exterior faces. Room/Building
-  Copy retains the existing foundation omission; choose Foundation before saving. Application
+  Copy retains Foundation and copy-paint applies its material to the destination. Application
   writes the existing semantic face appearances. The default edited Look uses
   timber inside and rough stone outside to make the distinction inspectable.
 - The Look editor keeps the Region preview on the left and the selected role’s gallery on the right. Seven icon-only role selectors sit below the preview, with tooltips naming the role and current choice. Columns and Brackets exercise the future-role empty states; the pinned source has no style collections for them. They do not change the five-slot recipe or its validation. The local `inline_gallery.gd` adapter changes only split-pane sizing; cards, search, selection and paging remain the native miniature browser.
@@ -80,11 +86,14 @@ Unrelated toolbar routes are disabled. The mock is not a production patch.
 
 Pass Godot arguments to `run.sh`, for example `--resolution 844x390`.
 After `--`, fixture flags include `--manager`, `--copy`, `--strip`, `--compose`,
-`--edit`, `--saved-copy`, `--long`. Add `--region-circle` or `--preview-ceiling`
+`--edit`, `--saved-copy`, `--foundation-copy`, `--copy-building`, `--long`. Add `--region-circle` or `--preview-ceiling`
 to `--edit` to open those preview states. The component routes are `--picker-wall`,
 `--picker-exterior_wall`, `--picker-floor`, `--picker-ceiling`, `--picker-foundation`, `--picker-columns` and `--picker-brackets`. `--long` adds long
 multilingual component captions; `--reduced-motion` disables gallery page motion. `--saved-copy --manager` reproduces the saved
-copy collection state used for the Manager review.
+copy collection state through the actual Copy route. `--foundation-copy` supplies a
+saved recipe differing only in Foundation, so Save remains available. `--copy-building`
+uses the ordinary Building icon pickup route. Captures include component references
+and recognition/visibility state in their companion JSON files.
 
 `--capture NAME --quit-after-capture` captures the native viewport after setup;
 `LOOKS_EVIDENCE` chooses an absolute evidence directory (default

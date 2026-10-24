@@ -91,9 +91,11 @@ public partial class LooksMock : Control
         Resized+=Layout; Mode(false); Callable.From(Layout).CallDeferred();
         var args=OS.GetCmdlineUserArgs();
         if(args.Contains("--long")) _fixtureLong=true;
-        if(args.Contains("--saved-copy")){_data.Copied=_rooms[0];_data.Save("Copper Kettle evening",_rooms[0],_data.Categories.First(c=>c.Name=="Timber").Id);_manager.RefreshMockCopy();}
+        if(args.Contains("--saved-copy"))_data.Save("Copper Kettle evening",_rooms[0],_data.Categories.First(c=>c.Name=="Timber").Id);
+        if(args.Contains("--foundation-copy"))_data.Save("Copper Kettle with another foundation",_rooms[0] with {Foundation=MockData.Source("oak-planks")},_data.Categories.First(c=>c.Name=="Timber").Id);
+        if(args.Any(a=>a is "--copy" or "--saved-copy" or "--foundation-copy" or "--copy-building"))
+            Callable.From(()=>{Mode(true);_copying=true;Target(0,args.Contains("--copy-building")?"building":"region");}).CallDeferred();
         if(args.Contains("--manager")) Callable.From(()=>OpenManager()).CallDeferred();
-        if(args.Contains("--copy")) Callable.From(()=>{Mode(true);_copying=true;Target(0,"region");}).CallDeferred();
         if(args.Contains("--strip")) Callable.From(()=>BeginFootprint("Rectangle")).CallDeferred();
         if(args.Contains("--compose")) Callable.From(()=>{OpenManager();_manager.EditMockLook();}).CallDeferred();
         if(args.Contains("--edit")) Callable.From(()=>{OpenManager();var e=_data.AllLooks.First(e=>MockData.Text(e,"packageId")==MockData.Personal);_manager.EditMockLook(_data.Look(e),MockData.Ref(e));}).CallDeferred();
@@ -115,6 +117,11 @@ public partial class LooksMock : Control
         _strip.Visible=_pending;
         _right.Visible=_builder.Visible=!(_pending && Size.Y<540);
         _copy.Present(_paintingMode,_copying,_data.Copied is null&&_data.CopiedAtomic is null);
+        var copyName=_copy.GetNode<Label>("Scope");
+        copyName.Text=copyName.TooltipText=_data.CopiedName;
+        copyName.TextOverrunBehavior=TextServer.OverrunBehavior.TrimEllipsis;
+        copyName.MouseFilter=MouseFilterEnum.Pass;
+        copyName.Visible=copyName.Text.Length>0;
         _saveCopy.Visible=_paintingMode&&_data.Copied is not null&&!_data.CopiedSaved;
         _clearCopy.Visible=_paintingMode&&(_data.Copied is not null||_data.CopiedAtomic is not null);
         _builder.GetNode<Button>("RailPanel/Tools/RoomsEntry").SetPressedNoSignal(!_paintingMode);
@@ -167,7 +174,6 @@ public partial class LooksMock : Control
                 if(subject is "region" or "building")
                 {
                     _data.Copied=subject=="building"?RegionLook.Pickup(_rooms.Select(Plan),r=>MockData.Text(_data.Entry(r),"displayName")):RegionLook.Pickup([Plan(_rooms[index])],r=>MockData.Text(_data.Entry(r),"displayName"));
-                    _data.Copied = _data.Copied with { Foundation = null };
                     _data.CopiedSubject=subject;
                     _copy.SetBuffer(new(Look:_data.Copied),subject,_data.Content);
                 }
@@ -386,6 +392,7 @@ public partial class LooksMock : Control
             hud.Size=hud.GetCombinedMinimumSize();var scale=Math.Min(1,(Size.X-24)/Math.Max(1,hud.Size.X));hud.Scale=Vector2.One*scale;hud.Position=new((Size.X-hud.Size.X*scale)/2,Size.Y-(compact?10:82)-hud.Size.Y*scale);
         }
         var buffer=_copy.GetNode<Control>("Buffer");_saveCopy.Position=buffer.Position+new Vector2(-36,-8);_clearCopy.Position=buffer.Position+new Vector2(-42,38);
+        var copyName=_copy.GetNode<Label>("Scope");copyName.Position=buffer.Position+new Vector2(-12,buffer.Size.Y-2);copyName.Size=new(buffer.Size.X+24,22);
         for(var i=0;i<_roomTargets.Count;i++){var rect=RoomRect(i);_roomTargets[i].Position=new(rect.GetCenter().X-22,rect.Position.Y-58);_roomTargets[i].Visible=!_pending&&i<(_rooms.Count>2?1:_rooms.Count);}
         _buildingTarget.Position=new(Size.X*.43f-(_rooms.Count>2?80:22),Math.Max(10,RoomRect(0).Position.Y-110));
         if(_stripMobile!=compact || (_pending && _stripRenderedCapacity!=StripCapacity())){RenderStrip();}
@@ -420,7 +427,10 @@ public partial class LooksMock : Control
     {
         var path=OS.GetEnvironment("LOOKS_EVIDENCE");if(path.Length==0)path="/tmp/rfg404-looks";System.IO.Directory.CreateDirectory(path);
         GetViewport().GetTexture().GetImage().SavePng(path+"/"+name+".png");
-        System.IO.File.WriteAllText(path+"/"+name+".json",System.Text.Json.JsonSerializer.Serialize(new{size=Size.ToString(),pending=_pending,looks=_data.AllLooks.Count(),rooms=_rooms.Count,copied=_data.Copied is not null,manager=_manager.Visible}));
+        Dictionary<string,string>? components(RegionLook? look)=>look?.Encode().ToDictionary(p=>p.Key.AsString(),p=>p.Value.AsString());
+        System.IO.File.WriteAllText(path+"/"+name+".json",System.Text.Json.JsonSerializer.Serialize(new{size=Size.ToString(),pending=_pending,looks=_data.AllLooks.Count(),rooms=_rooms.Count,copied=_data.Copied is not null,manager=_manager.Visible,
+            copiedLook=components(_data.Copied),copiedSaved=_data.CopiedSaved,copyCaption=_copy.GetNode<Label>("Scope").Text,copyCaptionVisible=_copy.GetNode<Label>("Scope").IsVisibleInTree(),saveCopyVisible=_saveCopy.IsVisibleInTree(),clearCopyVisible=_clearCopy.IsVisibleInTree(),
+            managerCopiedLookVisible=_manager.FindChild("CopiedLook",true,false) is Control copyRow && copyRow.IsVisibleInTree(),roomLooks=_rooms.Select(components).ToArray()}));
         GD.Print("MOCK_CAPTURE "+path+"/"+name+".png");
     }
 }
