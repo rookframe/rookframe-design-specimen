@@ -8,3 +8,5 @@ __pycache__/
 examples/exact-commit-consumer/.godot/
 examples/exact-commit-consumer/.plugged/
 examples/exact-commit-consumer/rookframe/ui/
+.saved-looks-runtime/
+.saved-looks-cache/
