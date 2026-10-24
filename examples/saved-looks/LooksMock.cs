@@ -158,7 +158,7 @@ public partial class LooksMock : Control
             Remember();
             foreach(var targetIndex in subject=="building" ? Enumerable.Range(0,_rooms.Count) : new[]{index})
             {
-                if(_data.Copied is not null) _rooms[targetIndex]=_data.Copied;
+                if(_data.Copied is not null) _rooms[targetIndex]=RegionLook.Pickup(_data.Copied.Apply(Plan(_rooms[targetIndex])));
                 else _rooms[targetIndex]=_rooms[targetIndex] with {Floor=_data.CopiedAtomic};
             }
             Present();return;

@@ -35,7 +35,7 @@ The tabletop is a flat synthetic surface using existing appearance resources.
 - Click a shape to supply a provisional footprint and open the Look strip.
   Hover or keyboard-focus previews; clicking or Enter creates it. Escape/cross
   cancels. Undo, redo and delete exercise local fixture history.
-- Painting → Copy → room/building icon copies a complete Look. Clicking the floor
+- Painting → Copy → room/building icon copies its Look components. Clicking the floor
   copies an atomic finish. The top-right swatch has Clear; unsaved Looks also have
   Save. Save opens the Manager with the copied components.
 - Painting's book opens the Manager. Looks supports source groups, search,
