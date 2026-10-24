@@ -46,6 +46,12 @@ The tabletop is a flat synthetic surface using existing appearance resources.
   a stock SphereMesh with the actual surface material, in the application's
   existing 3D preview world. Native search, selection and paging remain available;
   choosing a card returns to the Look, while Back preserves the draft.
+- The Look editor previews an actual small Region built by the production
+  RoomShell renderer. Rectangle/circle buttons change only the inspection shape.
+  Drag the preview (or focus it and use arrow keys) to orbit. The ceiling button
+  switches between the native cutaway and the complete enclosure, so all four
+  selected components can be inspected. Shape and ceiling state survive component
+  selection; draft Looks show a placeholder until all four components are chosen.
 - Painting → Paint → room/building icon opens the unchanged wheel.
 
 All state resets when the mock closes. No 3D room gesture is simulated.
@@ -55,7 +61,8 @@ Unrelated toolbar routes are disabled. The mock is not a production patch.
 
 Pass Godot arguments to `run.sh`, for example `--resolution 844x390`.
 After `--`, fixture flags include `--manager`, `--copy`, `--strip`, `--compose`,
-`--edit`, `--saved-copy`, `--long`. The component routes are `--picker-wall`,
+`--edit`, `--saved-copy`, `--long`. Add `--region-circle` or `--preview-ceiling`
+to `--edit` to open those preview states. The component routes are `--picker-wall`,
 `--picker-floor`, `--picker-ceiling` and `--picker-foundation`. `--long` adds long
 multilingual component captions; `--reduced-motion` disables gallery page motion. `--saved-copy --manager` reproduces the saved
 copy collection state used for the Manager review.

@@ -18,6 +18,7 @@ public partial class AppearanceManagement
     private RegionLook _draft = new();
     private string _draftName = "", _draftCategory = "all";
     private bool _readOnly;
+    private bool _previewCircular, _previewCeiling;
     private LineEdit? _lookName;
     private Button? _saveLook;
     private string _pickerRole = "";
@@ -202,6 +203,8 @@ public partial class AppearanceManagement
         _draftName = reference is null ? "" : _mock.Display(_mock.Entry(reference));
         _draftCategory = _category == AppearancePalette.Pinned ? "all" : _category;
         _pickerRole = "";
+        _previewCircular = OS.GetCmdlineUserArgs().Contains("--region-circle");
+        _previewCeiling = OS.GetCmdlineUserArgs().Contains("--preview-ceiling");
         _browserKey="";
         BuildMockEditor();
     }
@@ -270,26 +273,29 @@ public partial class AppearanceManagement
         categories.ItemSelected += index => _draftCategory = categories.GetItemMetadata((int)index).AsString();
         grouping.AddChild(categories); fields.AddChild(grouping); _lookEditor.AddChild(fields);
         var content = new HBoxContainer { SizeFlagsVertical = SizeFlags.ExpandFill }; content.AddThemeConstantOverride("separation",32); _lookEditor.AddChild(content);
-        if (!compact)
+        var preview = new MockLookPreview
         {
-            var preview = new VBoxContainer { CustomMinimumSize = new(270,0) };
-            var center = new CenterContainer { SizeFlagsVertical = SizeFlags.ExpandFill }; center.AddChild(MockUi.LookDisc(_draft,_mock,156)); preview.AddChild(center);
-            var caption = MockUi.Label(_draft.Encode().Count==4?"A complete Look":"Look preview",24); caption.HorizontalAlignment = HorizontalAlignment.Center; preview.AddChild(caption);
-            var detail = MockUi.Label("Walls · floor · ceiling · foundation",18); detail.HorizontalAlignment = HorizontalAlignment.Center; preview.AddChild(detail);
-            content.AddChild(preview);
-        }
+            CustomMinimumSize = new(compact ? 220 : Size.X < 1200 ? 360 : 500, compact ? 158 : 280),
+            SizeFlagsHorizontal = SizeFlags.ExpandFill,
+            SizeFlagsStretchRatio = compact ? .9f : 1.15f
+        };
+        content.AddChild(preview);
+        preview.Configure(_draft, _mock, _previewCircular, _previewCeiling, compact);
+        preview.ShapeChanged += value => _previewCircular = value;
+        preview.CeilingChanged += value => _previewCeiling = value;
         var grid = new GridContainer { Columns = compact ? 2 : 1, SizeFlagsHorizontal = SizeFlags.ExpandFill, SizeFlagsVertical = SizeFlags.ShrinkCenter };
         grid.AddThemeConstantOverride("h_separation",24); grid.AddThemeConstantOverride("v_separation",compact ? 6 : 18); content.AddChild(grid);
         foreach (var role in RegionLook.Roles)
         {
-            var row = new HBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill, CustomMinimumSize = new(0, compact ? 62 : 84) }; row.AddThemeConstantOverride("separation",12);
+            var row = new HBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill, CustomMinimumSize = new(0, compact ? 70 : 84) }; row.AddThemeConstantOverride("separation",12);
             var icon = new TextureRect { Texture = AppearanceIcons.SubjectTexture(role), CustomMinimumSize = new(26,26), ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize, StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered, SizeFlagsVertical = SizeFlags.ShrinkCenter };
-            row.AddChild(icon);
+            if (!compact) row.AddChild(icon); else icon.Free();
             var reference = DraftReference(role);
-            if (reference is not null) { var disc = MockUi.Disc(_mock.Entry(reference),_mock,compact ? 40 : 56); disc.MouseFilter = MouseFilterEnum.Ignore; row.AddChild(disc); }
+            if (reference is not null && !compact) { var disc = MockUi.Disc(_mock.Entry(reference),_mock,compact ? 40 : 56); disc.MouseFilter = MouseFilterEnum.Ignore; row.AddChild(disc); }
             var labels = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill, SizeFlagsVertical = SizeFlags.ShrinkCenter };
             labels.AddChild(MockUi.Label(char.ToUpperInvariant(role[0]) + role[1..],17));
             var name = MockUi.Label(reference is null ? "Choose a component" : MockData.Text(_mock.Entry(reference),"displayName"), compact ? 20 : 26);
+            name.TooltipText = name.Text; name.MouseFilter = MouseFilterEnum.Pass;
             name.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis; name.CustomMinimumSize = new(80,0); labels.AddChild(name); row.AddChild(labels);
             var edit = MockUi.Button("edit", "Choose " + role, () => { _pickerRole = role; BuildMockEditor(); }); edit.Disabled = _readOnly; edit.SizeFlagsVertical = SizeFlags.ShrinkCenter; row.AddChild(edit); grid.AddChild(row);
         }
