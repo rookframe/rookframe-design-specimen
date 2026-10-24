@@ -51,7 +51,7 @@ public partial class AppearanceManagement
         _lookGroups.AddThemeConstantOverride("separation",28);_lookBrowser.AddChild(_lookGroups);
         GetNode<VBoxContainer>(Styles).AddChild(_lookBrowser);
         _lookBrowser.GetVScrollBar().Theme=GD.Load<Theme>("res://rookframe/ui/theme/silkbound_theme.tres");
-        _copiedRow = new HBoxContainer { Name = "CopiedLook", CustomMinimumSize = new(0,76) };
+        _copiedRow = new HBoxContainer { Name = "CopiedLookMobile", CustomMinimumSize = new(0,70),SizeFlagsHorizontal=SizeFlags.ShrinkBegin };
         _copiedRow.AddThemeConstantOverride("separation", 12);
         var styles = GetNode<VBoxContainer>(Styles); styles.AddChild(_copiedRow); styles.MoveChild(_copiedRow, 1);
         var mobileNew = MockUi.Button("layers", "Compose a Look", () => EditMockLook());
@@ -73,14 +73,17 @@ public partial class AppearanceManagement
     }
     internal void RefreshMockCopy()
     {
+        _browserKey="";
         MockUi.Clear(_copiedRow);
         if (_mock.Copied is null || _mock.CopiedSaved) return;
-        _copiedRow.AddChild(MockUi.LookDisc(_mock.Copied, _mock, 48));
-        var text = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill, SizeFlagsVertical = SizeFlags.ShrinkCenter };
+        var preview=MockUi.LookThumbnail(_mock.Copied,_mock,new(128,88));
+        preview.SizeFlagsHorizontal=SizeFlags.Fill;preview.SizeFlagsVertical=SizeFlags.ShrinkCenter;
+        _copiedRow.AddChild(preview);
+        var text = new VBoxContainer { SizeFlagsVertical = SizeFlags.ShrinkCenter };
         text.AddChild(MockUi.Label("Copied Look", 23));
-        text.AddChild(MockUi.Label("Not saved", 17));
         _copiedRow.AddChild(text);
-        if (!_mock.CopiedSaved) _copiedRow.AddChild(MockUi.Button("save", "Save copied Look", () => EditMockLook(_mock.Copied)));
+        var save=MockUi.Button("save", "Save copied Look", () => EditMockLook(_mock.Copied));
+        save.SizeFlagsVertical=SizeFlags.ShrinkCenter;_copiedRow.AddChild(save);
     }
     private void UpdateMock()
     {
@@ -93,10 +96,11 @@ public partial class AppearanceManagement
         var looks = _subject is "region" or "building";
         var copyParent = _mobileLayout ? GetNode<VBoxContainer>("Mobile/Inset/Column") : GetNode<VBoxContainer>(Styles);
         if (_copiedRow.GetParent()!=copyParent){_copiedRow.Reparent(copyParent);copyParent.MoveChild(_copiedRow,1);}
-        _copiedRow.CustomMinimumSize=new(0,_mobileLayout?58:76);
+        _copiedRow.CustomMinimumSize=new(0,_mobileLayout?70:92);
+        if(_copiedRow.GetNodeOrNull<Control>("LookThumbnail") is {} copiedPreview)copiedPreview.CustomMinimumSize=_mobileLayout?new(100,66):new(128,88);
         _newLook.Visible = looks;
-        _copiedRow.Visible = looks && _mock.Copied is not null && !_mock.CopiedSaved && !_categoryEditing
-            && (!_mobileLayout || _mobileLocation.Page is MobilePage.Categories or MobilePage.Styles or MobilePage.Sources);
+        _copiedRow.Visible = looks && _mobileLayout && _mock.Copied is not null && !_mock.CopiedSaved && !_categoryEditing
+            && _mobileLocation.Page is MobilePage.Categories or MobilePage.Styles or MobilePage.Sources;
         GetNode<Label>(Categories+"/Heading/Title").Text=looks?"Categories":"Wheel categories";
         _categorySettings.Visible=looks;
         _categorySettings.Disabled=_category==AppearancePalette.Pinned;
@@ -148,6 +152,13 @@ public partial class AppearanceManagement
                 preview.TooltipText=preview.AccessibilityName="Inspect "+name;
                 preview.MouseFilter = MouseFilterEnum.Stop; preview.FocusMode = FocusModeEnum.All;
                 preview.Pressed += () => EditMockLook(_mock.Look(entry), MockData.Ref(entry));
+                preview.GetNode<Control>("Row/Preview").Hide();
+                var content=preview.GetNode<HBoxContainer>("Row");
+                var thumbnail=MockUi.LookThumbnail(_mock.Look(entry),_mock,new(112,80));
+                thumbnail.SizeFlagsHorizontal=SizeFlags.Fill;thumbnail.SizeFlagsVertical=SizeFlags.ShrinkCenter;
+                content.AddChild(thumbnail);content.MoveChild(thumbnail,0);
+                row.CustomMinimumSize=preview.CustomMinimumSize=new(0,84);
+                _mobilePreviews.RemoveAll(p=>p.Row==row);
             }
             row.GetNodeOrNull<Control>("Pin")?.Hide();
             row.GetNodeOrNull<Control>("Include")?.Hide();
@@ -164,8 +175,11 @@ public partial class AppearanceManagement
         var personal = MockData.Text(entry, "packageId") == MockData.Personal;
         field.Editable = personal;
         field.AddThemeColorOverride("font_uneditable_color",field.GetThemeColor("font_color"));
-        var preview = row.GetNode<RegionPaletteButton>("Preview");
-        preview.MouseFilter = MouseFilterEnum.Stop; preview.FocusMode = FocusModeEnum.All;
+        row.GetNode<Control>("Preview").Hide();
+        var preview=new Button {Theme=GD.Load<Theme>("res://rookframe/ui/theme/silkbound_theme.tres"),ThemeTypeVariation="RookframeQuietButton",
+            CustomMinimumSize=new(96,68),TooltipText="Inspect "+DisplayName(entry),AccessibilityName="Inspect "+DisplayName(entry)};
+        row.AddChild(preview);row.MoveChild(preview,0);
+        var thumbnail=MockUi.LookThumbnail(_mock.Look(entry),_mock,new(0,64));preview.AddChild(thumbnail);thumbnail.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         preview.Pressed += () => EditMockLook(_mock.Look(entry), MockData.Ref(entry));
     }
     private void RenderLookBrowser()
@@ -176,30 +190,47 @@ public partial class AppearanceManagement
         var entries=_mock.AllLooks.Where(e=>(_category=="all" || selected.Items.Contains(Reference(e)))
             && Search.Text.Split(' ',StringSplitOptions.RemoveEmptyEntries).All(term=>SearchText(e).Contains(term,StringComparison.OrdinalIgnoreCase)))
             .OrderBy(e=>Text(e,"packageId")==MockData.Personal?0:1).ThenBy(DisplayName).ToArray();
-        var columns=Math.Clamp((int)(_lookBrowser.Size.X/210),2,4);
+        var columns=Math.Clamp((int)(_lookBrowser.Size.X/240),2,4);
         var key=_category+"|"+Search.Text+"|"+columns+"|"+string.Join(";",entries.Select(e=>Reference(e)+"="+DisplayName(e)));
         if(key==_browserKey)return;_browserKey=key;MockUi.Clear(_lookGroups);
-        foreach(var group in entries.GroupBy(e=>Text(e,"packageId")))
+        var copied=_mock.Copied is not null && !_mock.CopiedSaved;
+        var sources=entries.Select(e=>Text(e,"packageId")).Distinct().ToList();
+        if(copied && !sources.Contains(MockData.Personal))sources.Insert(0,MockData.Personal);
+        foreach(var source in sources)
         {
+            var group=entries.Where(e=>Text(e,"packageId")==source).ToArray();
             var section=new VBoxContainer {SizeFlagsHorizontal=SizeFlags.ExpandFill};section.AddThemeConstantOverride("separation",12);
-            var heading=MockUi.Label(group.Key==MockData.Personal?"My Looks":Text(group.First(),"packageName"),22);
+            var heading=MockUi.Label(source==MockData.Personal?"My Looks":Text(group.First(),"packageName"),22);
             heading.Modulate=new Color(1,1,1,.72f);section.AddChild(heading);
             var grid=new GridContainer {Columns=columns,SizeFlagsHorizontal=SizeFlags.ExpandFill};grid.AddThemeConstantOverride("h_separation",20);grid.AddThemeConstantOverride("v_separation",16);section.AddChild(grid);
+            if(source==MockData.Personal && copied)
+                grid.AddChild(MockLookCard(_mock.Copied!,"Copied Look",()=>EditMockLook(_mock.Copied),true));
             foreach(var entry in group)
-            {
-                var card=new Button {Theme=GD.Load<Theme>("res://rookframe/ui/theme/silkbound_theme.tres"),ThemeTypeVariation="RookframeQuietButton",
-                    CustomMinimumSize=new(180,150),SizeFlagsHorizontal=SizeFlags.ExpandFill,TooltipText=DisplayName(entry),AccessibilityName="Open "+DisplayName(entry),MouseDefaultCursorShape=CursorShape.PointingHand};
-                var inset=new MarginContainer {MouseFilter=MouseFilterEnum.Ignore};card.AddChild(inset);inset.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
-                foreach(var side in new[]{"left","right","top","bottom"})inset.AddThemeConstantOverride("margin_"+side,10);
-                var content=new VBoxContainer {MouseFilter=MouseFilterEnum.Ignore};content.AddThemeConstantOverride("separation",8);inset.AddChild(content);
-                var center=new CenterContainer {MouseFilter=MouseFilterEnum.Ignore};content.AddChild(center);
-                var disc=MockUi.Disc(entry,_mock,68);disc.MouseFilter=MouseFilterEnum.Ignore;disc.FocusMode=FocusModeEnum.None;center.AddChild(disc);
-                var name=MockUi.Label(DisplayName(entry),22);name.AutowrapMode=TextServer.AutowrapMode.WordSmart;name.HorizontalAlignment=HorizontalAlignment.Center;name.MaxLinesVisible=2;name.TextOverrunBehavior=TextServer.OverrunBehavior.TrimEllipsis;content.AddChild(name);
-                card.Pressed+=()=>EditMockLook(_mock.Look(entry),Reference(entry));grid.AddChild(card);
-            }
+                grid.AddChild(MockLookCard(_mock.Look(entry),DisplayName(entry),()=>EditMockLook(_mock.Look(entry),Reference(entry))));
             _lookGroups.AddChild(section);
         }
         if(entries.Length==0)_lookGroups.AddChild(MockUi.Label(Search.Text.Length>0?"No matching Looks":"No Looks in this category",22));
+    }
+    private Button MockLookCard(RegionLook look,string title,Action open,bool copied=false)
+    {
+        var card=new Button {Name=copied?"CopiedLook":"SavedLook",Theme=GD.Load<Theme>("res://rookframe/ui/theme/silkbound_theme.tres"),ThemeTypeVariation="RookframeQuietButton",
+            CustomMinimumSize=new(210,220),SizeFlagsHorizontal=SizeFlags.ExpandFill,TooltipText=copied?"Save copied Look":title,AccessibilityName=copied?"Save copied Look":"Open "+title,MouseDefaultCursorShape=CursorShape.PointingHand};
+        var inset=new MarginContainer {MouseFilter=MouseFilterEnum.Ignore};card.AddChild(inset);inset.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
+        foreach(var side in new[]{"left","right","top","bottom"})inset.AddThemeConstantOverride("margin_"+side,8);
+        var content=new VBoxContainer {MouseFilter=MouseFilterEnum.Ignore};content.AddThemeConstantOverride("separation",8);inset.AddChild(content);
+        content.AddChild(MockUi.LookThumbnail(look,_mock,new(0,144)));
+        var name=MockUi.Label(title,22);name.CustomMinimumSize=new(0,52);name.AutowrapMode=TextServer.AutowrapMode.WordSmart;name.HorizontalAlignment=HorizontalAlignment.Center;name.VerticalAlignment=VerticalAlignment.Center;name.MaxLinesVisible=2;name.TextOverrunBehavior=TextServer.OverrunBehavior.TrimEllipsis;
+        card.Pressed+=open;
+        if(copied)
+        {
+            name.AutowrapMode=TextServer.AutowrapMode.Off;
+            name.TextOverrunBehavior=TextServer.OverrunBehavior.NoTrimming;
+            var center=new CenterContainer {MouseFilter=MouseFilterEnum.Ignore};content.AddChild(center);
+            var caption=new HBoxContainer {MouseFilter=MouseFilterEnum.Ignore};caption.AddThemeConstantOverride("separation",6);center.AddChild(caption);caption.AddChild(name);
+            var save=MockUi.Button("save","Save copied Look",open);save.SizeFlagsVertical=SizeFlags.ShrinkCenter;caption.AddChild(save);
+        }
+        else content.AddChild(name);
+        return card;
     }
     internal void EditMockLook(RegionLook? look = null, string? reference = null)
     {

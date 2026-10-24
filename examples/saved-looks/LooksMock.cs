@@ -333,14 +333,7 @@ public partial class LooksMock : Control
             var content=new VBoxContainer {Name="Content",MouseFilter=MouseFilterEnum.Ignore};content.AddThemeConstantOverride("separation",0);
             card.AddChild(content);content.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
             content.OffsetLeft=4;content.OffsetRight=-4;content.OffsetTop=2;content.OffsetBottom=-4;
-            var preview=GD.Load<PackedScene>(MockUi.Ui+"TabletopContentPreview.tscn").Instantiate<TabletopContentPreview>();
-            preview.MouseFilter=MouseFilterEnum.Ignore;preview.CustomMinimumSize=new(0,_stripMobile?60:104);content.AddChild(preview);
-            preview.SetMockRegion(_data.Look(entry),_data,false,false);
-            // Existing native preview world, with its background cleared for the shelf.
-            preview.GetNode<SubViewport>("PreviewViewportContainer/PreviewViewport").TransparentBg=true;
-            var environment=preview.GetNode<WorldEnvironment>("PreviewViewportContainer/PreviewViewport/PreviewWorld/Environment");
-            environment.Environment=(Godot.Environment)environment.Environment.Duplicate();
-            environment.Environment.BackgroundMode=Godot.Environment.BGMode.ClearColor;
+            content.AddChild(MockUi.LookThumbnail(_data.Look(entry),_data,new(0,_stripMobile?60:104)));
             var title=MockUi.Label(name,_stripMobile?18:21);title.AutowrapMode=TextServer.AutowrapMode.WordSmart;
             title.HorizontalAlignment=HorizontalAlignment.Center;title.MaxLinesVisible=2;title.TextOverrunBehavior=TextServer.OverrunBehavior.TrimWordEllipsis;
             title.MouseFilter=MouseFilterEnum.Ignore;content.AddChild(title);
@@ -454,7 +447,7 @@ public partial class LooksMock : Control
         Dictionary<string,string>? components(RegionLook? look)=>look?.Encode().ToDictionary(p=>p.Key.AsString(),p=>p.Value.AsString());
         System.IO.File.WriteAllText(path+"/"+name+".json",System.Text.Json.JsonSerializer.Serialize(new{size=Size.ToString(),pending=_pending,looks=_data.AllLooks.Count(),rooms=_rooms.Count,copied=_data.Copied is not null,manager=_manager.Visible,
             copiedLook=components(_data.Copied),copiedSaved=_data.CopiedSaved,copyCaption=_copy.GetNode<Label>("Scope").Text,copyCaptionVisible=_copy.GetNode<Label>("Scope").IsVisibleInTree(),saveCopyVisible=_saveCopy.IsVisibleInTree(),clearCopyVisible=_clearCopy.IsVisibleInTree(),
-            managerCopiedLookVisible=_manager.FindChild("CopiedLook",true,false) is Control copyRow && copyRow.IsVisibleInTree(),roomLooks=_rooms.Select(components).ToArray()}));
+            managerCopiedLookVisible=_manager.FindChildren("CopiedLook*","Control",true,false).OfType<Control>().Any(c=>c.IsVisibleInTree()),roomLooks=_rooms.Select(components).ToArray()}));
         GD.Print("MOCK_CAPTURE "+path+"/"+name+".png");
     }
 }

@@ -113,36 +113,22 @@ internal static class MockUi
         l.AddThemeFontSizeOverride("font_size", size); return l;
     }
     internal static void Clear(Node n) { foreach (var c in n.GetChildren()) { n.RemoveChild(c); c.QueueFree(); } }
-    internal static RegionPaletteButton Disc(D entry, MockData data, int diameter = 64)
+    internal static TabletopContentPreview LookThumbnail(RegionLook look, MockData data, Vector2 minimum)
     {
-        var disc = GD.Load<PackedScene>(Ui + "RegionPaletteButton.tscn").Instantiate<RegionPaletteButton>();
-        disc.VisualDiameter = diameter;
-        disc.CustomMinimumSize = Vector2.One * (diameter * RegionPaletteButton.ArtworkScale);
-        disc.Size = disc.CustomMinimumSize;
-        disc.TooltipText = disc.AccessibilityName = data.Display(entry);
-        var swatch = GD.Load<PackedScene>(Ui + "RegionPaletteSwatch.tscn").Instantiate<RegionPaletteSwatch>();
-        disc.AddChild(swatch);
-        swatch.Scale = Vector2.One * (diameter / 120f);
-        swatch.Position = (disc.Size - Vector2.One * diameter) / 2;
-        disc.Ready += () => swatch.SetEntry(entry, data.Content);
-        return disc;
-    }
-    internal static Control LookDisc(RegionLook look, MockData data, int diameter = 112)
-    {
-        var disc = GD.Load<PackedScene>(Ui + "RegionPaletteButton.tscn").Instantiate<RegionPaletteButton>();
-        disc.VisualDiameter = diameter;
-        disc.CustomMinimumSize = Vector2.One * (diameter * RegionPaletteButton.ArtworkScale);
-        disc.Size = disc.CustomMinimumSize;
-        disc.MouseFilter = Control.MouseFilterEnum.Ignore;
-        var pairs = look.Encode().ToArray();
-        for (var i = 0; i < pairs.Length; i++)
+        var preview = GD.Load<PackedScene>(Ui + "TabletopContentPreview.tscn").Instantiate<TabletopContentPreview>();
+        preview.Name = "LookThumbnail";
+        preview.MouseFilter = Control.MouseFilterEnum.Ignore;
+        preview.FocusMode = Control.FocusModeEnum.None;
+        preview.CustomMinimumSize = minimum;
+        preview.Ready += () =>
         {
-            var s = GD.Load<PackedScene>(Ui + "RegionPaletteSwatch.tscn").Instantiate<RegionPaletteSwatch>();
-            disc.AddChild(s); s.SetSector(i, pairs.Length); s.Scale = Vector2.One * (diameter / 120f);
-            s.Position = (disc.Size - Vector2.One * diameter) / 2;
-            var e = data.Entry(pairs[i].Value.AsString());
-            disc.Ready += () => s.SetEntry(e, data.Content);
-        }
-        return disc;
+            // One native Region, camera and lighting recipe for strip and Manager comparisons.
+            preview.SetMockRegion(look, data, false, false);
+            preview.GetNode<SubViewport>("PreviewViewportContainer/PreviewViewport").TransparentBg = true;
+            var world = preview.GetNode<WorldEnvironment>("PreviewViewportContainer/PreviewViewport/PreviewWorld/Environment");
+            world.Environment = (Godot.Environment)world.Environment.Duplicate();
+            world.Environment.BackgroundMode = Godot.Environment.BGMode.ClearColor;
+        };
+        return preview;
     }
 }

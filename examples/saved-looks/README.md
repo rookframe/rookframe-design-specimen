@@ -58,6 +58,13 @@ The tabletop is a flat synthetic surface using existing appearance resources.
   categories, composition, component selection, editing, pinning and deletion.
   The category pencil opens category settings and membership controls.
   Built-in Looks can be inspected and copied, not edited.
+  The Look gallery, copied-Look entry and mobile Look rows show actual 3D Regions,
+  using the drawing strip's fixed rectangular cutaway, camera and lighting. Names
+  remain beneath gallery thumbnails; source grouping and existing inspection actions
+  are retained. Orbit and shape controls remain in the Look editor.
+  An unsaved copied Look is the first desktop gallery card, with its Save icon
+  beside the caption. Mobile keeps a compact preview/name/Save group. Both disappear once
+  the copied recipe matches a saved Look; there is no separate status sentence.
 - The component chooser instances the UI Kit miniature gallery. Wall cards reuse
   the painter’s assembled 3D sample, including the full-height Surface and Top placement. Floor, ceiling and foundation cards use
   a stock SphereMesh with the actual surface material, in the application's
