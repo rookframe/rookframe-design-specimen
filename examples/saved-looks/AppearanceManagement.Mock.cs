@@ -213,6 +213,7 @@ public partial class AppearanceManagement
     private void EndMockEdit()
     {
         RemovePickerBack();
+        SetProcessInput(true);
         if (_lookEditor is null) return;
         _lookEditor.GetParent().RemoveChild(_lookEditor); _lookEditor.QueueFree(); _lookEditor = null;
         GetNode<Control>(Column).Show();
@@ -228,6 +229,7 @@ public partial class AppearanceManagement
         GetNode<Control>(Column).Hide(); Mobile.Hide();
         GetNode<Control>("Header").Show(); GetNode<Control>("Body").Show();
         GetNode<Label>("Header/Content/Row/Titles/Title").Text = _readOnly ? "Inspect Look" : _editingReference is null ? "Create Look" : "Edit Look";
+        SetProcessInput(false);
         _lookEditor = new VBoxContainer { Name = "LookEditor" };
         _lookEditor.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         _lookEditor.AddThemeConstantOverride("separation", 12);
@@ -331,6 +333,24 @@ public partial class AppearanceManagement
         if (_editingReference is null) return;
         var reference = _editingReference;
         _mock.Delete(reference); EndMockEdit();
+    }
+    internal bool HandleMockEditorKey(InputEventKey key)
+    {
+        if(!IsVisibleInTree() || _lookEditor is null || !key.Pressed)return false;
+        if(key.Keycode==Key.Escape)
+        {
+            if(_pickerRole.Length>0){_pickerRole="";BuildMockEditor();}
+            else EndMockEdit();
+            return true;
+        }
+        if(key.Keycode!=Key.Tab)return false;
+        // Same native focus pattern as the Manager, scoped to the visible editor.
+        var controls=FindChildren("*","Control",true,false).OfType<Control>()
+            .Where(c=>c.IsVisibleInTree() && c.FocusMode==FocusModeEnum.All
+                && (c is not BaseButton button || !button.Disabled)).ToArray();
+        var index=Array.IndexOf(controls,GetViewport().GuiGetFocusOwner());
+        if(controls.Length>0)controls[Mathf.PosMod(index+(key.ShiftPressed?-1:1),controls.Length)].GrabFocus();
+        return true;
     }
     internal void OpenMockPicker(string role)
     {

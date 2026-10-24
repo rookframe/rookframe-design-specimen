@@ -266,6 +266,11 @@ public partial class LooksMock : Control
         _strip.Position=new((Size.X-_strip.Size.X)/2,Size.Y-(compact?8:40)-_strip.Size.Y);
         _board.QueueRedraw();
     }
+    public override void _Input(InputEvent e)
+    {
+        if(e is InputEventKey key && _manager is not null && _manager.HandleMockEditorKey(key))
+            GetViewport().SetInputAsHandled();
+    }
     public override void _UnhandledKeyInput(InputEvent e)
     {
         if(e is not InputEventKey {Pressed:true} key)return;
