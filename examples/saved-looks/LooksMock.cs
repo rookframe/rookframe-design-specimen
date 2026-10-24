@@ -10,14 +10,20 @@ public partial class LooksMock : Control
     private PaintingHud _painting=null!;
     private PaintingCopyIndicator _copy=null!;
     private RegionBrushHud _drawing=null!;
+    private PanelContainer _drawingSurface=null!;
+    private ColorRect _drawingDivider=null!;
     private RegionPalette _wheel=null!;
     private ScrollContainer _left=null!,_right=null!,_builder=null!;
     private Button _saveCopy=null!,_clearCopy=null!;
     private PanelContainer _strip=null!;
     private TabBar _tabs=null!;
-    private HBoxContainer _cards=null!;
-    private Label _stripTitle=null!,_stripDetail=null!;
-    private ScrollContainer _cardsScroll=null!;
+    private Container _cards=null!;
+    private OptionButton _stripCategoryPicker=null!;
+    private Button _stripPrevious=null!,_stripNext=null!,_stripConfirm=null!;
+    private bool _stripMobile;
+    private int _stripPage;
+    private int _stripRenderedCapacity;
+    private string? _stripSelection;
     private MockTabletop _board=null!;
     private bool _paintingMode, _copying, _pending;
     private string _shape="Rectangle",_stripCategory="all";
@@ -53,12 +59,16 @@ public partial class LooksMock : Control
         bind(_builder,"RoomsEntry",()=>Mode(false)); bind(_builder,"PaletteEntry",()=>Mode(true));
         bind(_right,"BuilderEntry",()=>Mode(!_paintingMode));
         _right.GetNode<Button>("RailPanel/Tools/BuilderEntry").ButtonPressed=true;
-        _drawing=GD.Load<PackedScene>(MockUi.Ui+"RegionBrushHud.tscn").Instantiate<RegionBrushHud>(); AddChild(_drawing); _drawing.SetEntries(_data.Entries);
+        _drawingSurface=new PanelContainer { Name="DrawingHud",Theme=GD.Load<Theme>(MockUi.Ui+"RegionBrushHudTheme.tres"),ThemeTypeVariation="settings_surface" };
+        AddChild(_drawingSurface);
+        _drawing=GD.Load<PackedScene>(MockUi.Ui+"RegionBrushHud.tscn").Instantiate<RegionBrushHud>(); _drawingSurface.AddChild(_drawing); _drawing.SetEntries(_data.Entries);
         _drawing.GetNode<Control>("Looks").Hide(); _drawing.GetNode<Control>("Editing").Show();
         _drawing.GetNode<Control>("Editing/Sections/Visibility").Hide(); _drawing.GetNode<Control>("Editing/Sections/Divider").Hide();
         _drawing.DrawRequested+=()=>BeginFootprint(_drawing.Shape);
         _drawing.HistoryRequested+=History; _drawing.DeleteRequested+=DeleteRoom;
         _painting=GD.Load<PackedScene>(MockUi.Ui+"PaintingHud.tscn").Instantiate<PaintingHud>(); AddChild(_painting);
+        _drawingDivider=(ColorRect)_painting.GetNode<ColorRect>("Sections/HistoryDivider").Duplicate();
+        _drawing.AddChild(_drawingDivider);_drawing.MoveChild(_drawingDivider,1);
         _painting.PaintRequested+=()=>{_copying=false;Present();}; _painting.CopyRequested+=()=>{_copying=true;Present();};
         _painting.ManagementRequested+=()=>OpenManager(); _painting.HistoryRequested+=History;
         _copy=GD.Load<PackedScene>(MockUi.Ui+"PaintingCopyIndicator.tscn").Instantiate<PaintingCopyIndicator>(); AddChild(_copy); _copy.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
@@ -99,10 +109,11 @@ public partial class LooksMock : Control
     private void Present()
     {
         if(_painting is null)return;
-        _drawing.Visible=!_paintingMode&&!_pending; _painting.Visible=_paintingMode&&!_pending;
+        _drawingSurface.Visible=!_paintingMode&&!_pending; _painting.Visible=_paintingMode&&!_pending;
         _painting.Present(_copying,_data.Copied is null&&_data.CopiedAtomic is null);
         _painting.ShowContext(true,false,false,false);
         _strip.Visible=_pending;
+        _right.Visible=_builder.Visible=!(_pending && Size.Y<540);
         _copy.Present(_paintingMode,_copying,_data.Copied is null&&_data.CopiedAtomic is null);
         _saveCopy.Visible=_paintingMode&&_data.Copied is not null&&!_data.CopiedSaved;
         _clearCopy.Visible=_paintingMode&&(_data.Copied is not null||_data.CopiedAtomic is not null);
@@ -124,7 +135,15 @@ public partial class LooksMock : Control
         var w=Math.Min(340,(Size.X-260)/2.6f); var h=Math.Min(270,Size.Y*(compact?.34f:.31f));
         return new(new Vector2(Size.X*.43f+(index==0?-w-18:18),Size.Y*(compact?.35f:.38f)-h/2),new(w,h));
     }
-    internal Rect2 PendingRect()=>new(new Vector2(Size.X*.43f-Math.Min(500,Size.X*.48f)/2,Size.Y*.32f-Math.Min(280,Size.Y*(Size.Y<540?.23f:.31f))/2),new(Math.Min(500,Size.X*.48f),Math.Min(280,Size.Y*(Size.Y<540?.23f:.31f))));
+    internal Rect2 PendingRect()
+    {
+        if(Size.Y<540)
+        {
+            var width=Math.Min(390,Size.X-370);var height=Math.Min(220,Size.Y-120);
+            return new(new Vector2(80+(Size.X-350)/2-width/2,Size.Y/2-height/2),new(width,height));
+        }
+        return new(new Vector2(Size.X*.43f-Math.Min(500,Size.X*.48f)/2,Size.Y*.32f-Math.Min(280,Size.Y*(Size.Y<540?.23f:.31f))/2),new(Math.Min(500,Size.X*.48f),Math.Min(280,Size.Y*(Size.Y<540?.23f:.31f))));
+    }
     internal string Shape=>_shape;
     internal string CommittedShape=>_roomShapes.LastOrDefault()??"Rectangle";
     internal bool Pending=>_pending;
@@ -177,58 +196,146 @@ public partial class LooksMock : Control
     }
     internal void BeginFootprint(string shape)
     {
-        _shape=shape;_pending=true;_hover=null;_stripCategory="all";RenderStrip();Present();
+        _shape=shape;_pending=true;_hover=null;_stripCategory="all";_stripPage=0;_stripSelection=null;RenderStrip();Present();
     }
     private void BuildStrip()
     {
         _strip=new PanelContainer { Name="LookStrip",Theme=GD.Load<Theme>(MockUi.Ui+"RegionBrushHudTheme.tres"),ThemeTypeVariation="settings_surface" };
         AddChild(_strip);
-        var column=new VBoxContainer { Name="Column",Theme=MockUi.Controls };column.AddThemeConstantOverride("separation",8);var inset=new MarginContainer {Name="Inset"};foreach(var side in new[]{"left","right","top","bottom"})inset.AddThemeConstantOverride("margin_"+side,12);_strip.AddChild(inset);inset.AddChild(column);
-        var top=new HBoxContainer();top.AddThemeConstantOverride("separation",12);column.AddChild(top);
-        _tabs=new TabBar { SizeFlagsHorizontal=SizeFlags.ExpandFill, CustomMinimumSize=new(0,44), ScrollingEnabled=true, Theme=GD.Load<Theme>(MockUi.Ui+"manager/menu/silkbound/SilkboundTheme.tres") };
-        _tabs.AddThemeFontSizeOverride("font_size",20);
-        _tabs.TabChanged+=index=>{if(_renderingTabs||index<0||index>=_tabs.TabCount)return;_stripCategory=_tabs.GetTabMetadata((int)index).AsString();RenderCards();_board.QueueRedraw();};
-        top.AddChild(_tabs);
-        top.AddChild(MockUi.Button("close","Cancel new room",()=>{_pending=false;_hover=null;Present();}));
-        _cardsScroll=new ScrollContainer { VerticalScrollMode=ScrollContainer.ScrollMode.Disabled,HorizontalScrollMode=ScrollContainer.ScrollMode.Auto,SizeFlagsHorizontal=SizeFlags.ExpandFill };
-        _cards=new HBoxContainer();_cards.AddThemeConstantOverride("separation",16);_cardsScroll.AddChild(_cards);column.AddChild(_cardsScroll);
-        var bottom=new HBoxContainer();bottom.AddThemeConstantOverride("separation",16);column.AddChild(bottom);
-        _stripTitle=MockUi.Label("Choose a Look",22);bottom.AddChild(_stripTitle);
-        _stripDetail=MockUi.Label("Hover to preview · click to create",18);_stripDetail.SizeFlagsHorizontal=SizeFlags.ExpandFill;_stripDetail.HorizontalAlignment=HorizontalAlignment.Right;bottom.AddChild(_stripDetail);
+        BuildStripContents();
         _strip.Hide();
+    }
+    private void BuildStripContents()
+    {
+        MockUi.Clear(_strip);
+        _stripMobile=Size.Y<540;
+        var inset=new MarginContainer {Name="Inset"};
+        foreach(var side in new[]{"left","right","top","bottom"})inset.AddThemeConstantOverride("margin_"+side,_stripMobile?6:12);
+        _strip.AddChild(inset);
+        var column=new VBoxContainer { Name="Column",Theme=MockUi.Controls };
+        column.AddThemeConstantOverride("separation",_stripMobile?6:10);inset.AddChild(column);
+        if(_stripMobile)
+        {
+            _stripCategoryPicker=new OptionButton { Name="Category",Theme=MockUi.Controls,CustomMinimumSize=new(0,44),AccessibilityName="Look category",SizeFlagsHorizontal=SizeFlags.ExpandFill,FitToLongestItem=false,ClipText=true };
+            _stripCategoryPicker.AddThemeFontSizeOverride("font_size",20);
+            _stripCategoryPicker.ItemSelected+=index=>ChooseStripCategory(_stripCategoryPicker.GetItemMetadata((int)index).AsString());
+            column.AddChild(_stripCategoryPicker);
+            _cards=new VBoxContainer { Name="Looks",SizeFlagsVertical=SizeFlags.ExpandFill,SizeFlagsHorizontal=SizeFlags.ExpandFill };
+            _cards.AddThemeConstantOverride("separation",6);column.AddChild(_cards);
+            var actions=new HBoxContainer {Name="Actions"};actions.AddThemeConstantOverride("separation",4);column.AddChild(actions);
+            _stripPrevious=MockUi.Button("chevron-left","Previous Looks",()=>TurnStripPage(-1));actions.AddChild(_stripPrevious);
+            _stripNext=MockUi.Button("chevron-right","Next Looks",()=>TurnStripPage(1));actions.AddChild(_stripNext);
+            actions.AddChild(new Control {SizeFlagsHorizontal=SizeFlags.ExpandFill});
+            actions.AddChild(MockUi.Button("close","Cancel new room",CancelFootprint));
+            _stripConfirm=MockUi.Button("check","Create room with selected Look",()=>{if(_stripSelection is not null)CommitLook(_data.Entry(_stripSelection));});
+            _stripConfirm.Disabled=true;actions.AddChild(_stripConfirm);
+        }
+        else
+        {
+            var top=new HBoxContainer();top.AddThemeConstantOverride("separation",12);column.AddChild(top);
+            _tabs=new TabBar { SizeFlagsHorizontal=SizeFlags.ExpandFill, CustomMinimumSize=new(0,44), ScrollingEnabled=true, Theme=GD.Load<Theme>(MockUi.Ui+"manager/menu/silkbound/SilkboundTheme.tres") };
+            _tabs.AddThemeFontSizeOverride("font_size",20);
+            _tabs.TabChanged+=index=>{if(!_renderingTabs && index>=0 && index<_tabs.TabCount)ChooseStripCategory(_tabs.GetTabMetadata((int)index).AsString());};
+            top.AddChild(_tabs);
+            top.AddChild(MockUi.Button("close","Cancel new room",CancelFootprint));
+            var shelf=new HBoxContainer();shelf.AddThemeConstantOverride("separation",8);column.AddChild(shelf);
+            _stripPrevious=MockUi.Button("chevron-left","Previous Looks",()=>TurnStripPage(-1));_stripPrevious.SizeFlagsVertical=SizeFlags.ShrinkCenter;shelf.AddChild(_stripPrevious);
+            _cards=new HBoxContainer {Name="Looks",SizeFlagsHorizontal=SizeFlags.ExpandFill};_cards.AddThemeConstantOverride("separation",8);shelf.AddChild(_cards);
+            _stripNext=MockUi.Button("chevron-right","Next Looks",()=>TurnStripPage(1));_stripNext.SizeFlagsVertical=SizeFlags.ShrinkCenter;shelf.AddChild(_stripNext);
+        }
+    }
+    private float StripWidth()=>_stripMobile?244:Math.Min(Size.X-180,1260);
+    private int StripCapacity()=>_stripMobile?2:Math.Clamp((int)((StripWidth()-150)/164),1,6);
+    private void ChooseStripCategory(string category)
+    {
+        if(_renderingTabs)return;
+        _stripCategory=category;_stripPage=0;_stripSelection=null;_hover=null;
+        RenderCards();_board.QueueRedraw();
+    }
+    private void TurnStripPage(int delta)
+    {
+        _stripPage+=delta;_stripSelection=null;_hover=null;RenderCards();_board.QueueRedraw();
+    }
+    private void CancelFootprint(){_pending=false;_hover=null;_stripSelection=null;Present();}
+    private void CommitLook(D entry)
+    {
+        Remember();_rooms.Add(_data.Look(entry));_roomShapes.Add(_shape);
+        _pending=false;_hover=null;_stripSelection=null;Present();
     }
     private void RenderStrip()
     {
-        if(!_data.Categories.Any(c=>c.Id==_stripCategory))
-            _stripCategory=_data.Categories.First().Id;
+        if(_stripMobile!=(Size.Y<540))BuildStripContents();
+        if(!_data.Categories.Any(c=>c.Id==_stripCategory))_stripCategory=_data.Categories.First().Id;
         _renderingTabs=true;
-        _tabs.ClearTabs();
+        if(_stripMobile)_stripCategoryPicker.Clear();else _tabs.ClearTabs();
         foreach(var category in _data.Categories)
         {
-            _tabs.AddTab(category.Name,AppearanceIcons.Texture(category.Icon));var index=_tabs.TabCount-1;
-            _tabs.SetTabMetadata(index,category.Id);_tabs.SetTabIconMaxWidth(index,20);
-            if(category.Id==_stripCategory)_tabs.CurrentTab=index;
+            if(_stripMobile)
+            {
+                _stripCategoryPicker.AddItem(category.Name);
+                var index=_stripCategoryPicker.ItemCount-1;_stripCategoryPicker.SetItemMetadata(index,category.Id);
+                if(category.Id==_stripCategory)_stripCategoryPicker.Select(index);
+            }
+            else
+            {
+                _tabs.AddTab(category.Name,AppearanceIcons.Texture(category.Icon));var index=_tabs.TabCount-1;
+                _tabs.SetTabMetadata(index,category.Id);_tabs.SetTabIconMaxWidth(index,20);
+                if(category.Id==_stripCategory)_tabs.CurrentTab=index;
+            }
         }
-        _renderingTabs=false;
-        RenderCards();
+        _renderingTabs=false;RenderCards();
     }
     private void RenderCards()
     {
-        MockUi.Clear(_cards);_hover=null;
+        MockUi.Clear(_cards);
         var selected=_data.Categories.First(c=>c.Id==_stripCategory);
-        foreach(var entry in _data.AllLooks.Where(e=>selected.Items.Contains(MockData.Ref(e))))
+        var entries=_data.AllLooks.Where(e=>selected.Items.Contains(MockData.Ref(e))).ToArray();
+        var capacity=StripCapacity();
+        _stripRenderedCapacity=capacity;
+        _stripPage=Math.Clamp(_stripPage,0,Math.Max(0,(entries.Length-1)/capacity));
+        _stripPrevious.Disabled=_stripPage==0;_stripNext.Disabled=(_stripPage+1)*capacity>=entries.Length;
+        if(_stripMobile)_stripConfirm.Disabled=_stripSelection is null;
+        foreach(var entry in entries.Skip(_stripPage*capacity).Take(capacity))
         {
-            var card=new VBoxContainer { CustomMinimumSize=new(Size.Y<540?94:126,0) };card.AddThemeConstantOverride("separation",0);
-            var center=new CenterContainer();var disc=MockUi.Disc(entry,_data,Size.Y<540?50:72);center.AddChild(disc);card.AddChild(center);
-            var title=MockUi.Label(_fixtureLong?"The old northern garrison’s winter hall":_data.Display(entry),Size.Y<540?17:21);
-            title.AutowrapMode=TextServer.AutowrapMode.WordSmart;title.HorizontalAlignment=HorizontalAlignment.Center;title.CustomMinimumSize=new(Size.Y<540?94:126,0);title.MaxLinesVisible=Size.Y<540?1:2;title.TextOverrunBehavior=TextServer.OverrunBehavior.TrimEllipsis;card.AddChild(title);
-            void preview(){_hover=_data.Look(entry);_stripTitle.Text=_data.Display(entry);_stripDetail.Text="Click to create room";_board.QueueRedraw();}
-            void leave(){if(disc.HasFocus())return;_hover=null;_stripTitle.Text="Choose a Look";_stripDetail.Text="Hover to preview · click to create";_board.QueueRedraw();}
-            disc.MouseEntered+=preview;disc.FocusEntered+=preview;disc.MouseExited+=leave;disc.FocusExited+=leave;
-            disc.Pressed+=()=>{Remember();_rooms.Add(_data.Look(entry));_roomShapes.Add(_shape);_pending=false;_hover=null;Present();};_cards.AddChild(card);
+            var name=_fixtureLong?"The old northern garrison’s winter hall":_data.Display(entry);
+            var card=new Button {Name="Look_"+MockData.Text(entry,"localId"),Theme=GD.Load<Theme>("res://rookframe/ui/theme/silkbound_theme.tres"),ThemeTypeVariation="RookframeQuietButton",
+                CustomMinimumSize=new(_stripMobile?0:152,_stripMobile?104:158),SizeFlagsHorizontal=SizeFlags.ExpandFill,SizeFlagsVertical=SizeFlags.ExpandFill,
+                TooltipText=name,AccessibilityName=name,MouseDefaultCursorShape=CursorShape.PointingHand,ToggleMode=_stripMobile};
+            card.SetPressedNoSignal(_stripSelection==MockData.Ref(entry));
+            _cards.AddChild(card);
+            var content=new VBoxContainer {Name="Content",MouseFilter=MouseFilterEnum.Ignore};content.AddThemeConstantOverride("separation",0);
+            card.AddChild(content);content.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
+            content.OffsetLeft=4;content.OffsetRight=-4;content.OffsetTop=2;content.OffsetBottom=-4;
+            var preview=GD.Load<PackedScene>(MockUi.Ui+"TabletopContentPreview.tscn").Instantiate<TabletopContentPreview>();
+            preview.MouseFilter=MouseFilterEnum.Ignore;preview.CustomMinimumSize=new(0,_stripMobile?60:104);content.AddChild(preview);
+            preview.SetMockRegion(_data.Look(entry),_data,false,false);
+            // Existing native preview world, with its background cleared for the shelf.
+            preview.GetNode<SubViewport>("PreviewViewportContainer/PreviewViewport").TransparentBg=true;
+            var environment=preview.GetNode<WorldEnvironment>("PreviewViewportContainer/PreviewViewport/PreviewWorld/Environment");
+            environment.Environment=(Godot.Environment)environment.Environment.Duplicate();
+            environment.Environment.BackgroundMode=Godot.Environment.BGMode.ClearColor;
+            var title=MockUi.Label(name,_stripMobile?18:21);title.AutowrapMode=TextServer.AutowrapMode.WordSmart;
+            title.HorizontalAlignment=HorizontalAlignment.Center;title.MaxLinesVisible=2;title.TextOverrunBehavior=TextServer.OverrunBehavior.TrimWordEllipsis;
+            title.MouseFilter=MouseFilterEnum.Ignore;content.AddChild(title);
+            void showPreview(){_hover=_data.Look(entry);_board.QueueRedraw();}
+            if(!_stripMobile)
+            {
+                card.MouseEntered+=showPreview;card.FocusEntered+=showPreview;
+                void leave(){if(card.HasFocus())return;_hover=null;_board.QueueRedraw();}
+                card.MouseExited+=leave;card.FocusExited+=leave;
+            }
+            card.Pressed+=()=>
+            {
+                if(!_stripMobile){CommitLook(entry);return;}
+                _stripSelection=MockData.Ref(entry);showPreview();_stripConfirm.Disabled=false;
+                foreach(var choice in _cards.GetChildren().OfType<Button>())choice.SetPressedNoSignal(choice==card);
+            };
         }
-        if(_cards.GetChildCount()==0){var empty=MockUi.Label("No Looks in this category",20);empty.CustomMinimumSize=new(200,76);_cards.AddChild(empty);}
-        _stripTitle.Text="Choose a Look";_stripDetail.Text="Hover to preview · click to create";
+        if(entries.Length==0)
+        {
+            var empty=MockUi.Label("No Looks",20);empty.SizeFlagsHorizontal=SizeFlags.ExpandFill;empty.SizeFlagsVertical=SizeFlags.ExpandFill;
+            empty.HorizontalAlignment=HorizontalAlignment.Center;empty.VerticalAlignment=VerticalAlignment.Center;empty.CustomMinimumSize=new(140,_stripMobile?104:158);_cards.AddChild(empty);
+        }
         Callable.From(Layout).CallDeferred();
     }
     private void Remember(){_undo.Push((_rooms.ToArray(),_roomShapes.ToArray()));_redo.Clear();}
@@ -237,10 +344,35 @@ public partial class LooksMock : Control
         var from=redo?_redo:_undo;var to=redo?_undo:_redo;if(from.Count==0)return;to.Push((_rooms.ToArray(),_roomShapes.ToArray()));var state=from.Pop();_rooms.Clear();_rooms.AddRange(state.Looks);_roomShapes.Clear();_roomShapes.AddRange(state.Shapes);_hover=null;Present();
     }
     private void DeleteRoom(){if(_rooms.Count==0)return;Remember();_rooms.RemoveAt(_rooms.Count-1);_roomShapes.RemoveAt(_roomShapes.Count-1);Present();}
+    private void LayoutDrawingHud(int height)
+    {
+        _drawing.SetEditingHeight(height);
+        var scale=height/104f;
+        var frame=(StyleBoxTexture)_drawingSurface.Theme.GetStylebox("panel","settings_surface").Duplicate();
+        foreach(var side in new[]{Side.Left,Side.Top,Side.Right,Side.Bottom})
+        {
+            frame.SetTextureMargin(side,frame.GetTextureMargin(side)*scale);
+            frame.SetContentMargin(side,Mathf.Ceil(frame.GetTextureMargin(side)));
+            frame.SetExpandMargin(side,frame.GetExpandMargin(side)*scale);
+        }
+        _drawingSurface.AddThemeStyleboxOverride("panel",frame);
+        foreach(var path in new[]{"Shapes","Editing"})_drawing.GetNode<PanelContainer>(path).AddThemeStyleboxOverride("panel",new StyleBoxEmpty());
+        _drawing.AddThemeConstantOverride("separation",Mathf.RoundToInt(12*scale));
+        _drawingDivider.CustomMinimumSize=new(1,48*scale);
+        var length=height-frame.GetMinimumSize().Y;
+        foreach(var button in _drawing.GetNode<HBoxContainer>("Shapes/Row").GetChildren().OfType<Button>())
+        {
+            button.Theme=_painting.GetNode<Control>("Sections").Theme;
+            button.ThemeTypeVariation="NavigationGlyph";
+            button.CustomMinimumSize=new(length,length);
+            button.AddThemeConstantOverride("icon_max_width",Mathf.RoundToInt(length/2));
+        }
+    }
     private void Layout()
     {
         if(_manager is null)return;
         var compact=Size.Y<540;var tablet=Size.X<1200;
+        _right.Visible=_builder.Visible=!(_pending&&compact);
         foreach(var rail in new[]{_left,_right,_builder})rail.Call("set_compact",compact||tablet);
         var edge=_left.GetThemeConstant("inset");var top=_left.GetThemeConstant("top");var separation=_left.GetThemeConstant("separation");
         foreach(var rail in new[]{_left,_right,_builder})
@@ -248,23 +380,21 @@ public partial class LooksMock : Control
             var natural=rail.GetNode<Control>("RailPanel").GetCombinedMinimumSize();rail.Size=new(natural.X,Math.Min(natural.Y,Size.Y-top-edge));
         }
         _left.Position=new(edge,top);_right.Position=new(Size.X-edge-_right.Size.X,top);_builder.Position=new(_right.Position.X-_builder.Size.X-separation,top);
-        var height=compact?68:104;_drawing.SetEditingHeight(height);_painting.LayoutFor(height);
-        foreach(var hud in new Control[]{_drawing,_painting})
+        var height=compact?68:104;LayoutDrawingHud(height);_painting.LayoutFor(height);
+        foreach(var hud in new Control[]{_drawingSurface,_painting})
         {
             hud.Size=hud.GetCombinedMinimumSize();var scale=Math.Min(1,(Size.X-24)/Math.Max(1,hud.Size.X));hud.Scale=Vector2.One*scale;hud.Position=new((Size.X-hud.Size.X*scale)/2,Size.Y-(compact?10:82)-hud.Size.Y*scale);
         }
         var buffer=_copy.GetNode<Control>("Buffer");_saveCopy.Position=buffer.Position+new Vector2(-36,-8);_clearCopy.Position=buffer.Position+new Vector2(-42,38);
         for(var i=0;i<_roomTargets.Count;i++){var rect=RoomRect(i);_roomTargets[i].Position=new(rect.GetCenter().X-22,rect.Position.Y-58);_roomTargets[i].Visible=!_pending&&i<(_rooms.Count>2?1:_rooms.Count);}
         _buildingTarget.Position=new(Size.X*.43f-(_rooms.Count>2?80:22),Math.Max(10,RoomRect(0).Position.Y-110));
+        if(_stripMobile!=compact || (_pending && _stripRenderedCapacity!=StripCapacity())){RenderStrip();}
         var stripFrame=(StyleBoxTexture)_strip.Theme.GetStylebox("panel","settings_surface").Duplicate();
         if(compact)foreach(var side in new[]{Side.Left,Side.Top,Side.Right,Side.Bottom}){stripFrame.SetTextureMargin(side,stripFrame.GetTextureMargin(side)*.65f);stripFrame.SetContentMargin(side,Mathf.Ceil(stripFrame.GetTextureMargin(side)));}
         _strip.AddThemeStyleboxOverride("panel",stripFrame);
-        var stripInset=_strip.GetNode<MarginContainer>("Inset");
-        foreach(var side in new[]{"left","right","top","bottom"})stripInset.AddThemeConstantOverride("margin_"+side,compact?4:12);
-        _strip.GetNode<VBoxContainer>("Inset/Column").AddThemeConstantOverride("separation",compact?4:8);
-        _stripDetail.Visible=!compact;
-        _strip.Size=new(Math.Min(Size.X-(compact?20:240),1120),0);_strip.Size=new(_strip.Size.X,_strip.GetCombinedMinimumSize().Y);
-        _strip.Position=new((Size.X-_strip.Size.X)/2,Size.Y-(compact?8:40)-_strip.Size.Y);
+        _strip.Size=new(StripWidth(),compact?Size.Y-16:0);
+        if(!compact)_strip.Size=new(_strip.Size.X,_strip.GetCombinedMinimumSize().Y);
+        _strip.Position=compact?new(Size.X-_strip.Size.X-8,8):new((Size.X-_strip.Size.X)/2,Size.Y-32-_strip.Size.Y);
         _board.QueueRedraw();
     }
     public override void _Input(InputEvent e)
@@ -275,7 +405,7 @@ public partial class LooksMock : Control
     public override void _UnhandledKeyInput(InputEvent e)
     {
         if(e is not InputEventKey {Pressed:true} key)return;
-        if(key.Keycode==Key.Escape&&_pending){_pending=false;_hover=null;Present();GetViewport().SetInputAsHandled();}
+        if(key.Keycode==Key.Escape&&_pending){CancelFootprint();GetViewport().SetInputAsHandled();}
         if(key.Keycode==Key.F9)Capture("manual");
         if(key.Keycode==Key.F8){_fixtureLong=!_fixtureLong;if(_pending)RenderStrip();}
     }

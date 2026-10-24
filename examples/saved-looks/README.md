@@ -32,9 +32,17 @@ The tabletop is a flat synthetic surface using existing appearance resources.
 ## Routes
 
 - Builder rail: Rooms opens drawing controls; palette opens Painting.
-- Click a shape to supply a provisional footprint and open the Look strip.
-  Hover or keyboard-focus previews; clicking or Enter creates it. Escape/cross
-  cancels. Undo, redo and delete exercise local fixture history.
+- The drawing HUD uses the painting HUD’s single native frame and internal divider:
+  shapes in one section, undo/redo/delete in the other. Click a shape to supply a
+  provisional footprint and replace the HUD with the Look picker.
+- Desktop uses a continuous shelf with category tabs and real 3D Region thumbnails.
+  Hover or keyboard-focus previews; clicking or Enter creates the region. The shelf
+  has native previous/next controls when more Looks are available. No instruction row.
+- Landscape mobile uses a right-edge palette with a category selector and two Looks
+  per page. Tap a Look to preview it, then use the checkmark to create. Changing page
+  or category clears the tentative choice; Cancel discards the provisional footprint.
+  The builder/right rails hide while this palette is open. Escape/cross cancels on
+  either layout. Creation restores the drawing HUD; undo/redo/delete use local history.
 - Painting → Copy → room/building icon copies its Look components. Clicking the floor
   copies an atomic finish. The top-right swatch has Clear; unsaved Looks also have
   Save. Save opens the Manager with the copied components.
