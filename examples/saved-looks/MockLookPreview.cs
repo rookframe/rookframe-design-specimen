@@ -20,6 +20,12 @@ public partial class MockLookPreview : VBoxContainer
         stage.FocusMode = FocusModeEnum.All;
         stage.AccessibilityName = "3D Look preview";
         stage.TooltipText = "Drag to rotate · arrow keys to rotate and tilt";
+        var focus = new Panel { MouseFilter = MouseFilterEnum.Ignore, Visible = false };
+        focus.AddThemeStyleboxOverride("panel", MockUi.Controls.GetStylebox("focus", "RookframeActionIcon"));
+        stage.AddChild(focus);
+        focus.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
+        stage.FocusEntered += focus.Show;
+        stage.FocusExited += focus.Hide;
         if (complete) stage.SetMockRegion(look, data, circular, ceiling);
         else
         {
