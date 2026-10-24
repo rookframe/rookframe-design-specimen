@@ -365,6 +365,12 @@ public partial class AppearanceManagement
         var header=GetNode<HBoxContainer>("Header/Content/Row");header.AddChild(back);header.MoveChild(back,0);
         var gallery=GD.Load<PackedScene>("res://rookframe/ui/components/content/miniature_browser.tscn").Instantiate<Control>();
         gallery.Theme=GD.Load<Theme>("res://rookframe/ui/theme/silkbound_theme.tres");
+        if(OS.GetCmdlineUserArgs().Contains("--long") || TranslationServer.GetLocale().StartsWith("ja",StringComparison.Ordinal))
+        {
+            gallery.Theme=(Theme)gallery.Theme.Duplicate();
+            var font=GD.Load<Font>("res://rookframe/ui/theme/locales/ja_regular.tres");
+            foreach(var type in new[]{"RookframeBody","RookframeMeta","TooltipLabel"})gallery.Theme.SetFont("font",type,font);
+        }
         gallery.Set("paginated",true);
         gallery.Set("reduced_motion",OS.GetCmdlineUserArgs().Contains("--reduced-motion"));
         _lookEditor!.AddChild(gallery);
