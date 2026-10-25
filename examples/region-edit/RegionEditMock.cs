@@ -176,7 +176,7 @@ public partial class RegionEditMock : Control
             visual.Ceiling.SetShaderParameter("group_visibility",_roofHidden?0f:1f);
             foreach(var wall in visual.Walls)wall.SetShaderParameter("context_cutaway",_cutaway?1f:0f);
             visual.Caps.Visible=_cutaway;
-            if(_cutaway&&(visual.State.Angle!=r.Angle||visual.Caps.Mesh is null))
+            if(visual.State.Angle!=r.Angle||visual.Caps.Mesh is null)
             {visual.Shell.Cutaway.Update(visual.Root.Basis,_camera.GlobalBasis.Z,null);visual.Caps.Mesh=visual.Shell.Cutaway.Caps();}
             _roomVisuals[r.VisualId]=visual with{State=r};
         }
