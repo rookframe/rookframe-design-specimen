@@ -228,8 +228,17 @@ public partial class RegionEditMock : Control
         _paint.Visible=_builder&&_tool=="paint";_editHud.Visible=_builder&&Pending&&!_looks.Visible;
         _undoButton.Disabled=_undo.Count==0;_redoButton.Disabled=_redo.Count==0;_delete.Disabled=_rooms.Count==0;_commit.Disabled=_invalid;
         _commit.TooltipText=_commit.AccessibilityName=_invalid?"Rooms overlap · move apart to commit":"Commit edit";
-        _caption.Text=_rooms.Count==0?"Room deleted · Commit or Cancel":(_building?"Building":Current.Name)+"  ·  "+Storey(Current)+(Current.Stacked?"  ·  Stacked":"")+(Pending?"  ·  "+(_building||_invalid?"Preview":Attached(Current)?"Same building":"New building"):"");
-        _caption.TooltipText=_caption.Text;_caption.Visible=_builder&&_tool=="";
+        if(_rooms.Count==0)_caption.Text=_caption.TooltipText="Room deleted · Commit or Cancel";
+        else
+        {
+            var name=_building?"Building":Current.Name;
+            var result="  ·  "+Storey(Current)+(Current.Stacked?"  ·  Stacked":"")+(Pending?"  ·  "+(_building||_invalid?"Preview":Attached(Current)?"Same building":"New building"):"");
+            _caption.TooltipText=name+result;
+            var font=_caption.GetThemeFont("font");var width=Math.Max(80,Size.X-300)-font.GetStringSize(result,HorizontalAlignment.Left,-1,18).X;
+            var shown=name;while(shown.Length>3&&font.GetStringSize(shown,HorizontalAlignment.Left,-1,18).X>width)shown=shown[..^2]+"…";
+            _caption.Text=shown+result;
+        }
+        _caption.Visible=_builder&&_tool=="";
         _notice.Text=_invalid?(_newRoom?"Rooms overlap. Draw in empty space.":"Rooms overlap. Move them apart."):"";
         _notice.Visible=_builder&&_notice.Text.Length>0&&!_looks.Visible;
         Arrange();
