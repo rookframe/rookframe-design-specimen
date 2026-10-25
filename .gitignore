@@ -10,3 +10,6 @@ examples/exact-commit-consumer/.plugged/
 examples/exact-commit-consumer/rookframe/ui/
 .saved-looks-runtime/
 .saved-looks-cache/
+
+.region-edit-runtime/
+.region-edit-cache/

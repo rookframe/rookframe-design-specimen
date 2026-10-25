@@ -1,0 +1,23 @@
+config_version=5
+[application]
+config/name="RFG-401 · Region editing · native mock"
+run/main_scene="res://prototypes/region-edit/RegionEditMock.tscn"
+config/features=PackedStringArray("4.7", "C#")
+[autoload]
+ScrollInputPropagation="res://rookframe/application/ui/ScrollInputPropagation.cs"
+[display]
+mouse_cursor/custom_image="res://rookframe/application/ui/assets/appearance-icons/pointer.png"
+mouse_cursor/custom_image_hotspot=Vector2(3,3)
+window/size/viewport_width=1920
+window/size/viewport_height=1080
+window/size/window_width_override=1440
+window/size/window_height_override=810
+window/subwindows/embed_subwindows=true
+[dotnet]
+project/assembly_name="Rookframe"
+[editor]
+import/use_multiple_threads=false
+[rendering]
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
+environment/defaults/default_clear_color=Color(0.04,0.06,0.06,1)
