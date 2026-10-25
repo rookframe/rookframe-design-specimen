@@ -63,6 +63,7 @@ public partial class RegionEditMock : Control
     public override void _Ready()
     {
         BuildStage(); BuildUi();
+        MouseExited+=()=>{_rotationHovered=false;_feedback.QueueRedraw();};
         Resized+=Arrange;
         var args=OS.GetCmdlineUserArgs();
         _longNames=args.Contains("--long");
@@ -134,13 +135,13 @@ public partial class RegionEditMock : Control
     private void Tool(string tool){Cancel();_tool=_tool==tool?"":tool;_wallPoint=null;Present();}
     private void Begin(){if(Pending)return;_before=Copy();_undo.Clear();_redo.Clear();}
     private List<Room> Copy()=>_rooms.Select(r=>r with{Ring=r.Ring.ToArray()}).ToList();
-    private void Set(List<Room> state){_snap=null;_rooms.Clear();_rooms.AddRange(state.Select(r=>r with{Ring=r.Ring.ToArray()}));_selected=Math.Clamp(_selected,0,Math.Max(0,_rooms.Count-1));Rebuild();}
+    private void Set(List<Room> state){ClearRotationGuides();_snap=null;_rooms.Clear();_rooms.AddRange(state.Select(r=>r with{Ring=r.Ring.ToArray()}));_selected=Math.Clamp(_selected,0,Math.Max(0,_rooms.Count-1));Rebuild();}
     private void Remember(){Begin();_undo.Push(Copy());_redo.Clear();}
     private void Cancel(){if(_before is{} before){_before=null;_newRoom=false;_looks?.Hide();Set(before);}_undo.Clear();_redo.Clear();_drag="";Present();}
     private void Commit()
     {
         if(!Pending||_invalid)return;
-        _snap=null;_worldUndo.Push(_before!);_worldRedo.Clear();_before=null;_undo.Clear();_redo.Clear();_newRoom=false;_looks.Hide();Present();
+        ClearRotationGuides();_snap=null;_worldUndo.Push(_before!);_worldRedo.Clear();_before=null;_undo.Clear();_redo.Clear();_newRoom=false;_looks.Hide();Present();
     }
     private void History(bool redo)
     {
@@ -148,10 +149,10 @@ public partial class RegionEditMock : Control
         var to=Pending?(redo?_undo:_redo):(redo?_worldUndo:_worldRedo);
         if(from.Count==0)return;to.Push(Copy());Set(from.Pop());
     }
-    private void Delete(){_snap=null;if(_rooms.Count==0)return;Remember();_rooms.RemoveAt(_selected);_selected=Math.Clamp(_selected,0,Math.Max(0,_rooms.Count-1));Rebuild();}
+    private void Delete(){ClearRotationGuides();_snap=null;if(_rooms.Count==0)return;Remember();_rooms.RemoveAt(_selected);_selected=Math.Clamp(_selected,0,Math.Max(0,_rooms.Count-1));Rebuild();}
     private void Reset(string state)
     {
-        _snap=null;_drag="";_before=null;_undo.Clear();_redo.Clear();_worldUndo.Clear();_worldRedo.Clear();_tool="";_building=false;_newRoom=false;_selected=1;_anchor=-1;_wallPoint=null;_scenario=state;_looks.Hide();_rooms.Clear();
+        ClearRotationGuides();_snap=null;_drag="";_before=null;_undo.Clear();_redo.Clear();_worldUndo.Clear();_worldRedo.Clear();_tool="";_building=false;_newRoom=false;_selected=1;_anchor=-1;_wallPoint=null;_scenario=state;_looks.Hide();_rooms.Clear();
         _rooms.Add(new("Great hall",new(-3,0),Rectangle(6,6),Look:"Tavern"));
         _rooms.Add(new("East wing",new(2,0),Rectangle(4,4)));
         if(state is "lift" or "stacked")_rooms.Add(new("Upper chamber",new(2,0),Rectangle(4,4),3,2.8f,Stacked:true));
@@ -406,7 +407,7 @@ public partial class RegionEditMock : Control
     private void HandleButton(InputEvent e,string kind){if(e is InputEventMouseButton{ButtonIndex:MouseButton.Left} m){if(m.Pressed)StartDrag(kind,GetGlobalMousePosition());else EndDrag();AcceptEvent();}}
     private void StartDrag(string kind,Vector2 at)
     {
-        if(_rooms.Count==0)return;_snap=null;_rotationSnap=null;TooltipText="";Remember();_drag=kind;_startPixel=at;_startPlane=Plane(at,Current.Floor);_dragStart=Copy();_startAngle=(_startPlane-Current.At).Angle();
+        if(_rooms.Count==0)return;_snap=null;_rotationSnap=null;_rotationGuide=kind=="rotate";_rotationHovered=false;_rotationGuideStart=Current.Angle;TooltipText="";Remember();_drag=kind;_startPixel=at;_startPlane=Plane(at,Current.Floor);_dragStart=Copy();_startAngle=(_startPlane-Current.At).Angle();_feedback.QueueRedraw();
     }
     private void EndDrag()
     {
@@ -419,7 +420,7 @@ public partial class RegionEditMock : Control
     public override void _GuiInput(InputEvent e)
     {
         if(!_builder||_tool=="paint"||_looks.Visible)return;
-        if(e is InputEventMouseMotion hover&&_drag.Length==0){var h=_hits.Where(h=>h.Point.DistanceTo(hover.Position)<24).OrderBy(h=>h.Point.DistanceTo(hover.Position)).FirstOrDefault();TooltipText=h.Kind switch{"move"=>"Drag to move","rotate"=>"Drag to rotate","lift"=>"Lift room and rooms stacked above","height"=>"Change room height","foundation"=>"Change foundation height","anchor"=>"Pull wall anchor to create a corner","insert"=>"Add wall anchor; drag it to create a corner",_=>""};}
+        if(e is InputEventMouseMotion hover&&_drag.Length==0){var h=_hits.Where(h=>h.Point.DistanceTo(hover.Position)<24).OrderBy(h=>h.Point.DistanceTo(hover.Position)).FirstOrDefault();var rotating=h.Kind=="rotate";if(rotating!=_rotationHovered){_rotationHovered=rotating;_feedback.QueueRedraw();}TooltipText=h.Kind switch{"move"=>"Drag to move","rotate"=>"Drag to rotate · snaps every 45°","lift"=>"Lift room and rooms stacked above","height"=>"Change room height","foundation"=>"Change foundation height","anchor"=>"Pull wall anchor to create a corner","insert"=>"Add wall anchor; drag it to create a corner",_=>""};}
         if(e is InputEventMouseButton{ButtonIndex:MouseButton.Left} m)
         {
             if(!m.Pressed){EndDrag();return;}
@@ -428,7 +429,7 @@ public partial class RegionEditMock : Control
                 if(_newRoom){Cancel();_tool="draw";}Remember();_newRoom=true;var point=Plane(m.Position);_rooms.Add(new("New room",point,Rectangle(.2f,.2f),Shape:_rootHud.Shape));_selected=_rooms.Count-1;_drag="draw";_startPixel=m.Position;_startPlane=point;Rebuild();return;
             }
             var hits=_hits.Where(h=>h.Point.DistanceTo(m.Position)<23).OrderBy(h=>h.Point.DistanceTo(m.Position)).ToArray();
-            if(hits.Length>0){var kind=hits[0].Kind;if(kind.StartsWith("select")){_snap=null;_selected=int.Parse(kind[6..]);_building=false;_anchor=-1;Present();}else if(kind.StartsWith("building")){_snap=null;_selected=int.Parse(kind[8..]);_building=true;Present();}else if(kind=="insert"){InsertAnchor();StartDrag("anchor",m.Position);}else StartDrag(kind,m.Position);return;}
+            if(hits.Length>0){var kind=hits[0].Kind;if(kind.StartsWith("select")){ClearRotationGuides();_snap=null;_selected=int.Parse(kind[6..]);_building=false;_anchor=-1;Present();}else if(kind.StartsWith("building")){ClearRotationGuides();_snap=null;_selected=int.Parse(kind[8..]);_building=true;Present();}else if(kind=="insert"){InsertAnchor();StartDrag("anchor",m.Position);}else StartDrag(kind,m.Position);return;}
             if(_rooms.Count>0)
             {
                 var r=Current;var poly=Polygon(r);var point=Plane(m.Position,r.Floor);
@@ -483,7 +484,7 @@ public partial class RegionEditMock : Control
     private void Capture(string name)
     {
         var path=OS.GetEnvironment("REGION_EVIDENCE");if(path.Length==0)path="/tmp/rfg401-region-edit";System.IO.Directory.CreateDirectory(path);GetViewport().GetTexture().GetImage().SavePng(path+"/"+name+".png");
-        System.IO.File.WriteAllText(path+"/"+name+".json",System.Text.Json.JsonSerializer.Serialize(new{scenario=_scenario,size=Size.ToString(),pending=Pending,invalid=_invalid,commitEnabled=!_commit.Disabled,tool=_tool,snapped=_snap is not null,cornerSnapped=_snap?.Corner is not null,corner=_snap?.Corner?.Point.ToString(),rooms=_rooms.Select(r=>new{r.Name,r.Floor,r.Height,r.Angle,at=r.At.ToString(),corners=r.Ring.Length}),hits=_hits.Select(h=>new{kind=h.Kind,at=h.Point.ToString()})}));GD.Print("MOCK_CAPTURE "+path+"/"+name+".png");
+        System.IO.File.WriteAllText(path+"/"+name+".json",System.Text.Json.JsonSerializer.Serialize(new{scenario=_scenario,size=Size.ToString(),pending=Pending,invalid=_invalid,commitEnabled=!_commit.Disabled,tool=_tool,rotationGuideVisible=RotationGuideVisible,snapped=_snap is not null,cornerSnapped=_snap?.Corner is not null,corner=_snap?.Corner?.Point.ToString(),rooms=_rooms.Select(r=>new{r.Name,r.Floor,r.Height,r.Angle,at=r.At.ToString(),corners=r.Ring.Length}),hits=_hits.Select(h=>new{kind=h.Kind,at=h.Point.ToString()})}));GD.Print("MOCK_CAPTURE "+path+"/"+name+".png");
     }
 }
 public partial class MockOverlay:Control
@@ -493,6 +494,7 @@ public partial class MockOverlay:Control
     public override void _Draw()
     {
         foreach(var poly in OwnerMock.Overlaps){DrawColoredPolygon(poly,new(1,.16f,.1f,.55f));DrawPolyline([..poly,poly[0]],new(1,.3f,.2f),2,true);}
+        OwnerMock.DrawRotationGuides(this);
         if(AnchorPoint is{} p){DrawCircle(p,8,new("e8d7a8"));DrawArc(p,11,0,Mathf.Tau,32,new("1c282c"),2,true);}
     }
 }

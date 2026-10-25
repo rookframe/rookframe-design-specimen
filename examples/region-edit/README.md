@@ -55,6 +55,12 @@ Pull beyond the catch to rotate freely between them. The prototype captures
 within 4 degrees and releases beyond 7 degrees; these are provisional feel settings.
 Rotating a Building applies the selected room's snapped turn to every member,
 preserving their relative positions and angles. Invalid overlap still blocks Commit.
+Hovering or dragging the rotation handle shows a guide on the room's floor plane:
+a ring with fixed 45-degree marks, a dashed starting direction and a solid current
+direction with a degree readout. The current direction turns gold at a snap.
+The guide remains after release while that rotation is pending, then clears on
+Commit, Cancel, history navigation, selection change or another edit. The existing
+cave rotation handle stays in use; the guide adds no button or second rotation tool.
 
 Joined rooms use one shared-wall calculation. Both affected rooms refresh when
 contact changes: exterior timber is removed from the divider and restored on
