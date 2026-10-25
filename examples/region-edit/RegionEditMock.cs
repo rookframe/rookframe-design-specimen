@@ -338,11 +338,11 @@ public partial class RegionEditMock : Control
     private void Controls()
     {
         foreach(var n in _handles.GetChildren().OfType<Node3D>().Where(n=>n.Name.ToString().StartsWith("Transient"))){_handles.RemoveChild(n);n.QueueFree();}
-        _hits.Clear();_overlay.ContactEdges.Clear();_overlay.Markers.Clear();_overlay.Outlines.Clear();foreach(var n in _handles.GetChildren().OfType<Node3D>())n.Hide();
+        _hits.Clear();_overlay.ContactEdges.Clear();_overlay.Markers.Clear();_overlay.Outlines.Clear();_overlay.PolygonClosure=null;foreach(var n in _handles.GetChildren().OfType<Node3D>())n.Hide();
         bool active=_builder&&_tool==""&&_rooms.Count>0&&!_looks.Visible;
         _foundation.Visible=active;
         if(!active){_overlay.QueueRedraw();return;}
-        if(_snap is{} contact)_overlay.ContactEdges.Add(new[]{Project(V(contact.A,contact.Floor)),Project(V(contact.B,contact.Floor))});
+        if(_snap is{} contact){_overlay.ContactEdges.Add(new[]{Project(V(contact.A,contact.Floor)),Project(V(contact.B,contact.Floor))});if(contact.Corner is{} corner)_overlay.PolygonClosure=Project(V(corner.Point,contact.Floor));}
         foreach(var (room,i) in _rooms.Select((r,i)=>(r,i)))
         {
             if(i!=_selected&&Current.Stacked&&room.Floor<Current.Floor&&Geometry2D.IntersectPolygons(Polygon(room),Polygon(Current)).Any(p=>Area(p)>.05f))continue;
@@ -406,7 +406,7 @@ public partial class RegionEditMock : Control
     private void HandleButton(InputEvent e,string kind){if(e is InputEventMouseButton{ButtonIndex:MouseButton.Left} m){if(m.Pressed)StartDrag(kind,GetGlobalMousePosition());else EndDrag();AcceptEvent();}}
     private void StartDrag(string kind,Vector2 at)
     {
-        if(_rooms.Count==0)return;_snap=null;TooltipText="";Remember();_drag=kind;_startPixel=at;_startPlane=Plane(at,Current.Floor);_dragStart=Copy();_startAngle=(_startPlane-Current.At).Angle();
+        if(_rooms.Count==0)return;_snap=null;_rotationSnap=null;TooltipText="";Remember();_drag=kind;_startPixel=at;_startPlane=Plane(at,Current.Floor);_dragStart=Copy();_startAngle=(_startPlane-Current.At).Angle();
     }
     private void EndDrag()
     {
@@ -461,13 +461,14 @@ public partial class RegionEditMock : Control
             var targets=_building?BuildingMembers(start):new[]{_selected};
             if(_drag=="lift"&&!original.Stacked)targets=Enumerable.Range(0,start.Count).Where(i=>i==_selected||start[i].Stacked&&start[i].At.DistanceTo(original.At)<.1f).ToArray();
             var move=_drag=="move"?SnapMove(start,targets,Plane(motion.Position,original.Floor)-_startPlane):Vector2.Zero;
+            var turn=_drag=="rotate"?SnapRotation(original.Angle+(now-original.At).Angle()-_startAngle)-original.Angle:0;
             foreach(var i in targets)
             {
                 var r=start[i];
                 switch(_drag)
                 {
                     case "move":_rooms[i]=r with{At=r.At+move};break;
-                    case "rotate":var a=(now-original.At).Angle()-_startAngle;_rooms[i]=r with{Angle=r.Angle+a,At=_building?original.At+(r.At-original.At).Rotated(a):r.At};break;
+                    case "rotate":_rooms[i]=r with{Angle=r.Angle+turn,At=_building?original.At+(r.At-original.At).Rotated(turn):r.At};break;
                     case "lift":_rooms[i]=r with{Floor=Math.Max(0,r.Floor+(_startPixel.Y-motion.Position.Y)/35)};break;
                     case "height":_rooms[i]=r with{Height=Math.Max(.5f,r.Height+(_startPixel.Y-motion.Position.Y)/35)};break;
                     case "foundation":var df=Math.Max(-r.Base+.1f,(_startPixel.Y-motion.Position.Y)/35);_rooms[i]=r with{Floor=r.Floor+df,Base=r.Base+df};break;
@@ -482,7 +483,7 @@ public partial class RegionEditMock : Control
     private void Capture(string name)
     {
         var path=OS.GetEnvironment("REGION_EVIDENCE");if(path.Length==0)path="/tmp/rfg401-region-edit";System.IO.Directory.CreateDirectory(path);GetViewport().GetTexture().GetImage().SavePng(path+"/"+name+".png");
-        System.IO.File.WriteAllText(path+"/"+name+".json",System.Text.Json.JsonSerializer.Serialize(new{scenario=_scenario,size=Size.ToString(),pending=Pending,invalid=_invalid,commitEnabled=!_commit.Disabled,tool=_tool,snapped=_snap is not null,rooms=_rooms.Select(r=>new{r.Name,r.Floor,r.Height,r.Angle,at=r.At.ToString(),corners=r.Ring.Length}),hits=_hits.Select(h=>new{kind=h.Kind,at=h.Point.ToString()})}));GD.Print("MOCK_CAPTURE "+path+"/"+name+".png");
+        System.IO.File.WriteAllText(path+"/"+name+".json",System.Text.Json.JsonSerializer.Serialize(new{scenario=_scenario,size=Size.ToString(),pending=Pending,invalid=_invalid,commitEnabled=!_commit.Disabled,tool=_tool,snapped=_snap is not null,cornerSnapped=_snap?.Corner is not null,corner=_snap?.Corner?.Point.ToString(),rooms=_rooms.Select(r=>new{r.Name,r.Floor,r.Height,r.Angle,at=r.At.ToString(),corners=r.Ring.Length}),hits=_hits.Select(h=>new{kind=h.Kind,at=h.Point.ToString()})}));GD.Print("MOCK_CAPTURE "+path+"/"+name+".png");
     }
 }
 public partial class MockOverlay:Control

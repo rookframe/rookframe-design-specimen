@@ -40,11 +40,21 @@ its height chevron, planar arrows and rotation handle; it has no independent lif
 Lifting the demonstrated base wing carries its upper room by the same amount.
 
 Moving near a parallel wall lightly snaps it into contact. Continue sliding along
-the wall or pull away to release. The highlighted edge shows the contact. The
+the wall or pull away to release. While sliding, nearby ends of the contacting
+walls also snap into alignment. The highlighted edge shows contact, and the
+existing outline ring marks an aligned corner. Pull past the corner to keep sliding.
+Corner alignment never creates an overlap or replaces a shared wall with only
+point contact. The
 prototype uses an 8-pixel capture distance and 14-pixel release distance; these
 are tuning values, not approved product constants. It never rotates or raises
 a room automatically, and refuses snaps that would overlap another room.
 A selected Building keeps all its rooms together under the same movement.
+
+Rotation lightly catches at multiples of 45 degrees relative to the world axes.
+Pull beyond the catch to rotate freely between them. The prototype captures
+within 4 degrees and releases beyond 7 degrees; these are provisional feel settings.
+Rotating a Building applies the selected room's snapped turn to every member,
+preserving their relative positions and angles. Invalid overlap still blocks Commit.
 
 Joined rooms use one shared-wall calculation. Both affected rooms refresh when
 contact changes: exterior timber is removed from the divider and restored on
@@ -126,7 +136,10 @@ touch usability. The repository's ordinary specimen check remains
 `godot --headless --path . --script res://tests/specimen.gd` after installing the
 pinned UI Kit and importing the root project.
 
-To check the snapping experiment, pass `-- --check-snap` (default room state).
+To check wall/corner alignment and 45-degree rotation, pass `-- --check-snap`
+(default room state). Run this with a native window at the review size, not
+`--headless`: the headless display uses a 64×64 viewport and cannot establish
+pixel-based snapping at the actual interface size.
 `-- --check-joins` checks the actual retained visuals for duplicate exterior
 trim, exposed upper detail, separation/rejoining and both height-preview cases.
 These disposable checks apply to the demonstrated aligned-floor assembly;
