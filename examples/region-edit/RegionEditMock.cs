@@ -230,7 +230,7 @@ public partial class RegionEditMock : Control
         _commit.TooltipText=_commit.AccessibilityName=_invalid?"Rooms overlap · move apart to commit":"Commit edit";
         _caption.Text=_rooms.Count==0?"Room deleted · Commit or Cancel":(_building?"Building":Current.Name)+"  ·  "+Storey(Current)+(Current.Stacked?"  ·  Stacked":"")+(Pending?"  ·  "+(_building||_invalid?"Preview":Attached(Current)?"Same building":"New building"):"");
         _caption.TooltipText=_caption.Text;_caption.Visible=_builder&&_tool=="";
-        _notice.Text=_invalid?"Rooms overlap. Move them apart.":"";
+        _notice.Text=_invalid?(_newRoom?"Rooms overlap. Draw in empty space.":"Rooms overlap. Move them apart."):"";
         _notice.Visible=_builder&&_notice.Text.Length>0&&!_looks.Visible;
         Arrange();
     }
