@@ -41,8 +41,8 @@ Lifting the demonstrated base wing carries its upper room by the same amount.
 
 Moving near a parallel wall lightly snaps it into contact. Continue sliding along
 the wall or pull away to release. While sliding, nearby ends of the contacting
-walls also snap into alignment. The highlighted edge shows contact, and the
-existing outline ring marks an aligned corner. Pull past the corner to keep sliding.
+walls also snap into alignment. The highlighted edge shows contact.
+Pull past an aligned corner to keep sliding.
 Corner alignment never creates an overlap or replaces a shared wall with only
 point contact. The
 prototype uses an 8-pixel capture distance and 14-pixel release distance; these

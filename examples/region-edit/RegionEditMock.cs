@@ -343,7 +343,7 @@ public partial class RegionEditMock : Control
         bool active=_builder&&_tool==""&&_rooms.Count>0&&!_looks.Visible;
         _foundation.Visible=active;
         if(!active){_overlay.QueueRedraw();return;}
-        if(_snap is{} contact){_overlay.ContactEdges.Add(new[]{Project(V(contact.A,contact.Floor)),Project(V(contact.B,contact.Floor))});if(contact.Corner is{} corner)_overlay.PolygonClosure=Project(V(corner.Point,contact.Floor));}
+        if(_snap is{} contact)_overlay.ContactEdges.Add(new[]{Project(V(contact.A,contact.Floor)),Project(V(contact.B,contact.Floor))});
         foreach(var (room,i) in _rooms.Select((r,i)=>(r,i)))
         {
             if(i!=_selected&&Current.Stacked&&room.Floor<Current.Floor&&Geometry2D.IntersectPolygons(Polygon(room),Polygon(Current)).Any(p=>Area(p)>.05f))continue;
