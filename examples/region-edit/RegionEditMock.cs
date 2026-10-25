@@ -24,6 +24,8 @@ public partial class RegionEditMock : Control
     private Node2D _foundation=null!;
     private MockOverlay _feedback=null!;
     private readonly List<Room> _rooms=[];
+    private sealed record RoomVisual(Node3D Root,Room State,RoomDraft Plan,RoomShell Shell,MeshInstance3D Caps,ShaderMaterial Ceiling,ShaderMaterial[] Walls);
+    private readonly Dictionary<Guid,RoomVisual> _roomVisuals=[];
     private List<Room>? _before;
     private readonly Stack<List<Room>> _undo=[],_redo=[],_worldUndo=[],_worldRedo=[];
     private readonly List<(Vector2 Point,string Kind)> _hits=[];
@@ -36,7 +38,7 @@ public partial class RegionEditMock : Control
     private float _startAngle;
     private Vector2? _wallPoint;
     private int _wallEdge;
-    private record Room(string Name,Vector2 At,Vector2[] Ring,float Floor=0,float Height=2.8f,float Angle=0,bool Stacked=false,string Look="Tavern",float Base=.22f,string Shape="Rectangle",RegionLook? Appearance=null);
+    private record Room(string Name,Vector2 At,Vector2[] Ring,float Floor=0,float Height=2.8f,float Angle=0,bool Stacked=false,string Look="Tavern",float Base=.22f,string Shape="Rectangle",RegionLook? Appearance=null){public Guid VisualId{get;init;}=Guid.NewGuid();}
     private Room Current=>_rooms[Math.Clamp(_selected,0,_rooms.Count-1)];
     private bool Pending=>_before is not null;
     private D? Content(string package,string local)=>_entries.Select(v=>v.AsGodotDictionary()).FirstOrDefault(e=>LocalAppearancePalette.Text(e,"packageId")==package&&LocalAppearancePalette.Text(e,"localId")==local);
@@ -65,6 +67,8 @@ public partial class RegionEditMock : Control
         var state=Array.IndexOf(args,"--state");Reset(state>=0?args[state+1]:"room");
         Callable.From(Arrange).CallDeferred();
         if(args.Contains("--capture"))CaptureLater(args);
+        if(args.Contains("--profile-drag"))ProfileDrag();
+        if(args.Contains("--check-snap"))CheckSnap();
     }
     private void BuildStage()
     {
@@ -126,13 +130,13 @@ public partial class RegionEditMock : Control
     private void Tool(string tool){Cancel();_tool=_tool==tool?"":tool;_wallPoint=null;Present();}
     private void Begin(){if(Pending)return;_before=Copy();_undo.Clear();_redo.Clear();}
     private List<Room> Copy()=>_rooms.Select(r=>r with{Ring=r.Ring.ToArray()}).ToList();
-    private void Set(List<Room> state){_rooms.Clear();_rooms.AddRange(state.Select(r=>r with{Ring=r.Ring.ToArray()}));_selected=Math.Clamp(_selected,0,Math.Max(0,_rooms.Count-1));Rebuild();}
+    private void Set(List<Room> state){_snap=null;_rooms.Clear();_rooms.AddRange(state.Select(r=>r with{Ring=r.Ring.ToArray()}));_selected=Math.Clamp(_selected,0,Math.Max(0,_rooms.Count-1));Rebuild();}
     private void Remember(){Begin();_undo.Push(Copy());_redo.Clear();}
     private void Cancel(){if(_before is{} before){_before=null;_newRoom=false;_looks?.Hide();Set(before);}_undo.Clear();_redo.Clear();_drag="";Present();}
     private void Commit()
     {
         if(!Pending||_invalid)return;
-        _worldUndo.Push(_before!);_worldRedo.Clear();_before=null;_undo.Clear();_redo.Clear();_newRoom=false;_looks.Hide();Present();
+        _snap=null;_worldUndo.Push(_before!);_worldRedo.Clear();_before=null;_undo.Clear();_redo.Clear();_newRoom=false;_looks.Hide();Present();
     }
     private void History(bool redo)
     {
@@ -140,10 +144,10 @@ public partial class RegionEditMock : Control
         var to=Pending?(redo?_undo:_redo):(redo?_worldUndo:_worldRedo);
         if(from.Count==0)return;to.Push(Copy());Set(from.Pop());
     }
-    private void Delete(){if(_rooms.Count==0)return;Remember();_rooms.RemoveAt(_selected);_selected=Math.Clamp(_selected,0,Math.Max(0,_rooms.Count-1));Rebuild();}
+    private void Delete(){_snap=null;if(_rooms.Count==0)return;Remember();_rooms.RemoveAt(_selected);_selected=Math.Clamp(_selected,0,Math.Max(0,_rooms.Count-1));Rebuild();}
     private void Reset(string state)
     {
-        _before=null;_undo.Clear();_redo.Clear();_worldUndo.Clear();_worldRedo.Clear();_tool="";_building=false;_newRoom=false;_selected=1;_anchor=-1;_wallPoint=null;_scenario=state;_looks.Hide();_rooms.Clear();
+        _snap=null;_drag="";_before=null;_undo.Clear();_redo.Clear();_worldUndo.Clear();_worldRedo.Clear();_tool="";_building=false;_newRoom=false;_selected=1;_anchor=-1;_wallPoint=null;_scenario=state;_looks.Hide();_rooms.Clear();
         _rooms.Add(new("Great hall",new(-3,0),Rectangle(6,6),Look:"Tavern"));
         _rooms.Add(new("East wing",new(2,0),Rectangle(4,4)));
         if(state is "lift" or "stacked")_rooms.Add(new("Upper chamber",new(2,0),Rectangle(4,4),3,2.8f,Stacked:true));
@@ -152,30 +156,48 @@ public partial class RegionEditMock : Control
         if(state=="stacked")_selected=2;
         if(state=="anchor"){Remember();_anchor=2;_rooms[1]=Current with{Ring=[new(-2,-2),new(2,-2),new(3,0),new(2,2),new(-2,2)]};}
         if(state=="drawing"){_tool="draw";Remember();_newRoom=true;_rooms.Add(new("New room",new(-.5f,3),Rectangle(4,3)));_selected=2;}
+        if(state=="snap")_rooms[1]=Current with{At=new(3.1f,.45f)};
         if(state=="building"){_building=true;_rooms.Add(new("Workshop",new(-5,-6.5f),Rectangle(3,3)));}
         if(_longNames)for(int i=0;i<_rooms.Count;i++)_rooms[i]=_rooms[i] with{Name=_rooms[i].Name+" — Northern observatory / Северная галерея / 北の展望室"};
         Rebuild();
     }
     private void Rebuild()
     {
-        foreach(var n in _architecture.GetChildren()){_architecture.RemoveChild(n);n.QueueFree();}
-        foreach(var r in _rooms)BuildRoom(r);
+        foreach(var key in _roomVisuals.Keys.Where(k=>!_rooms.Any(r=>r.VisualId==k)).ToArray())
+        {var old=_roomVisuals[key];_architecture.RemoveChild(old.Root);old.Root.QueueFree();_roomVisuals.Remove(key);}
+        foreach(var r in _rooms)
+        {
+            if(!_roomVisuals.TryGetValue(r.VisualId,out var visual)||!SameShell(visual.State,r))
+            {
+                if(visual is not null){_architecture.RemoveChild(visual.Root);visual.Root.QueueFree();}
+                visual=BuildRoom(r,visual is not null&&visual.State.Look==r.Look&&visual.State.Appearance==r.Appearance?visual:null);
+            }
+            visual.Root.Position=V(r.At,r.Floor);visual.Root.Rotation=new(0,-r.Angle,0);
+            visual.Ceiling.SetShaderParameter("group_visibility",_roofHidden?0f:1f);
+            foreach(var wall in visual.Walls)wall.SetShaderParameter("context_cutaway",_cutaway?1f:0f);
+            visual.Caps.Visible=_cutaway;
+            if(_cutaway&&(visual.State.Angle!=r.Angle||visual.Caps.Mesh is null))
+            {visual.Shell.Cutaway.Update(visual.Root.Basis,_camera.GlobalBasis.Z,null);visual.Caps.Mesh=visual.Shell.Cutaway.Caps();}
+            _roomVisuals[r.VisualId]=visual with{State=r};
+        }
         Present();
     }
-    private void BuildRoom(Room r)
+    private static bool SameShell(Room a,Room b)=>a.Height==b.Height&&a.Base==b.Base&&a.Look==b.Look&&a.Appearance==b.Appearance&&a.Ring.SequenceEqual(b.Ring);
+    private RoomVisual BuildRoom(Room r,RoomVisual? previous=null)
     {
         var anchors=r.Ring.Select((p,i)=>new ContourAnchor("a"+i,p)).ToArray();
         var contour=new MixedContour(anchors,anchors.Select((a,i)=>new ContourSpan("w"+i,a.Id,anchors[(i+1)%anchors.Length].Id)).ToArray());
         var look=r.Appearance??Look(r.Look);
         var plan=look.Apply(new RoomDraft(Transform3D.Identity,new(-2,-2,4,4),look.Wall!,look.Floor!,look.Ceiling!,.18,0,r.Height,Contour:contour,FoundationThickness:r.Base,Foundation:look.Foundation!));
-        var shell=RoomShell.Build(plan,Content);
+        var shell=previous is null?RoomShell.Build(plan,Content):RoomShell.Preview(plan,previous.Plan,previous.Shell,Content,RoomSharedWallTopology.From(new[]{(r.Name,plan)}),r.Name,previous.Shell);
         var root=new Node3D{Position=V(r.At,r.Floor),Rotation=new(0,-r.Angle,0)};_architecture.AddChild(root);
-        var structure=new MeshInstance3D{Mesh=shell.Mesh};var decor=new MeshInstance3D{Mesh=shell.Decoration};root.AddChild(structure);root.AddChild(decor);
+        var structure=new MeshInstance3D{Mesh=shell.Mesh};var decor=new MeshInstance3D{Mesh=shell.Decoration??RoomDecoration.Combine(shell.Decorations)};root.AddChild(structure);root.AddChild(decor);
         var ceiling=InteriorRevealMaterial.Create((BaseMaterial3D)shell.Mesh.SurfaceGetMaterial(1),groupOnly:true);ceiling.SetShaderParameter("group_visibility",_roofHidden?0f:1f);structure.SetSurfaceOverrideMaterial(1,ceiling);
-        if(!_cutaway)return;
-        void bind(MeshInstance3D mesh,int index){var m=InteriorRevealMaterial.Create((BaseMaterial3D)mesh.Mesh.SurfaceGetMaterial(index));m.SetShaderParameter("cutaway_ranges",shell.Cutaway.Texture);m.SetShaderParameter("cutaway_floor",0f);m.SetShaderParameter("cutaway_slope",RoomCutaway.Slope);m.SetShaderParameter("context_cutaway",1f);mesh.SetSurfaceOverrideMaterial(index,m);}
-        bind(structure,2);for(int i=4;i<shell.Mesh.GetSurfaceCount();i++)bind(structure,i);for(int i=0;i<(decor.Mesh?.GetSurfaceCount()??0);i++)bind(decor,i);
-        shell.Cutaway.Update(root.Basis,_camera.GlobalBasis.Z,null);root.AddChild(new MeshInstance3D{Mesh=shell.Cutaway.Caps()});
+        var walls=new List<ShaderMaterial>();
+        void bind(MeshInstance3D mesh,int index){var m=InteriorRevealMaterial.Create((BaseMaterial3D)mesh.Mesh.SurfaceGetMaterial(index));m.SetShaderParameter("cutaway_ranges",shell.Cutaway.Texture);m.SetShaderParameter("cutaway_floor",0f);m.SetShaderParameter("cutaway_slope",RoomCutaway.Slope);m.SetShaderParameter("context_cutaway",_cutaway?1f:0f);mesh.SetSurfaceOverrideMaterial(index,m);walls.Add(m);}
+        if(shell.HeightPreview is{} height&&decor.Mesh is not null){var bounds=decor.Mesh.GetAabb();var shift=Vector3.Up*(float)(plan.UpperOffset-height.Plan.UpperOffset);decor.CustomAabb=bounds.Merge(new Aabb(bounds.Position+shift,bounds.Size));}
+        bind(structure,2);for(int i=4;i<shell.Mesh.GetSurfaceCount();i++)bind(structure,i);for(int i=0;i<(decor.Mesh?.GetSurfaceCount()??0);i++){bind(decor,i);var m=walls[^1];m.SetShaderParameter("preview_height",shell.HeightPreview is not null);m.SetShaderParameter("preview_upper",(float)plan.UpperOffset);m.SetShaderParameter("preview_top_shift",(float)(plan.UpperOffset-(shell.HeightPreview?.Plan.UpperOffset??plan.UpperOffset)));}
+        shell.Cutaway.Update(root.Basis,_camera.GlobalBasis.Z,null);var caps=new MeshInstance3D{Mesh=shell.Cutaway.Caps()};root.AddChild(caps);return new(root,r,plan,shell,caps,ceiling,walls.ToArray());
     }
     private bool Collision(Room a,Room b)=>Math.Min(a.Floor+a.Height,b.Floor+b.Height)-Math.Max(a.Floor,b.Floor)>.03f&&Geometry2D.IntersectPolygons(Polygon(a),Polygon(b)).Any(p=>Area(p)>.005f);
     private static float Area(Vector2[] p)=>Math.Abs(Enumerable.Range(0,p.Length).Sum(i=>p[i].Cross(p[(i+1)%p.Length])))/2;
@@ -265,10 +287,11 @@ public partial class RegionEditMock : Control
     }
     private void Controls()
     {
-        _hits.Clear();_overlay.Markers.Clear();_overlay.Outlines.Clear();foreach(var n in _handles.GetChildren()){_handles.RemoveChild(n);n.QueueFree();}
+        _hits.Clear();_overlay.ContactEdges.Clear();_overlay.Markers.Clear();_overlay.Outlines.Clear();foreach(var n in _handles.GetChildren()){_handles.RemoveChild(n);n.QueueFree();}
         bool active=_builder&&_tool==""&&_rooms.Count>0&&!_looks.Visible;
         _foundation.Visible=active;
         if(!active){_overlay.QueueRedraw();return;}
+        if(_snap is{} contact)_overlay.ContactEdges.Add(new[]{Project(V(contact.A,contact.Floor)),Project(V(contact.B,contact.Floor))});
         foreach(var (room,i) in _rooms.Select((r,i)=>(r,i)))
         {
             if(i!=_selected&&Current.Stacked&&room.Floor<Current.Floor&&Geometry2D.IntersectPolygons(Polygon(room),Polygon(Current)).Any(p=>Area(p)>.05f))continue;
@@ -319,7 +342,7 @@ public partial class RegionEditMock : Control
     private void HandleButton(InputEvent e,string kind){if(e is InputEventMouseButton{ButtonIndex:MouseButton.Left} m){if(m.Pressed)StartDrag(kind,GetGlobalMousePosition());else EndDrag();AcceptEvent();}}
     private void StartDrag(string kind,Vector2 at)
     {
-        if(_rooms.Count==0)return;TooltipText="";Remember();_drag=kind;_startPixel=at;_startPlane=Plane(at,Current.Floor);_dragStart=Copy();_startAngle=(_startPlane-Current.At).Angle();
+        if(_rooms.Count==0)return;_snap=null;TooltipText="";Remember();_drag=kind;_startPixel=at;_startPlane=Plane(at,Current.Floor);_dragStart=Copy();_startAngle=(_startPlane-Current.At).Angle();
     }
     private void EndDrag()
     {
@@ -341,7 +364,7 @@ public partial class RegionEditMock : Control
                 if(_newRoom){Cancel();_tool="draw";}Remember();_newRoom=true;var point=Plane(m.Position);_rooms.Add(new("New room",point,Rectangle(.2f,.2f),Shape:_rootHud.Shape));_selected=_rooms.Count-1;_drag="draw";_startPixel=m.Position;_startPlane=point;Rebuild();return;
             }
             var hits=_hits.Where(h=>h.Point.DistanceTo(m.Position)<23).OrderBy(h=>h.Point.DistanceTo(m.Position)).ToArray();
-            if(hits.Length>0){var kind=hits[0].Kind;if(kind.StartsWith("select")){_selected=int.Parse(kind[6..]);_building=false;_anchor=-1;Present();}else if(kind.StartsWith("building")){_selected=int.Parse(kind[8..]);_building=true;Present();}else if(kind=="insert"){InsertAnchor();StartDrag("anchor",m.Position);}else StartDrag(kind,m.Position);return;}
+            if(hits.Length>0){var kind=hits[0].Kind;if(kind.StartsWith("select")){_snap=null;_selected=int.Parse(kind[6..]);_building=false;_anchor=-1;Present();}else if(kind.StartsWith("building")){_snap=null;_selected=int.Parse(kind[8..]);_building=true;Present();}else if(kind=="insert"){InsertAnchor();StartDrag("anchor",m.Position);}else StartDrag(kind,m.Position);return;}
             if(_rooms.Count>0)
             {
                 var r=Current;var poly=Polygon(r);var point=Plane(m.Position,r.Floor);
@@ -354,7 +377,7 @@ public partial class RegionEditMock : Control
     {
         if(e is InputEventKey{Pressed:true,Echo:false} k)
         {
-            if(k.Keycode is >=Key.Key1 and <=Key.Key7){Reset(new[]{"room","overlap","lift","stacked","anchor","drawing","building"}[(int)(k.Keycode-Key.Key1)]);GetViewport().SetInputAsHandled();}
+            if(k.Keycode is >=Key.Key1 and <=Key.Key8){Reset(new[]{"room","overlap","lift","stacked","anchor","drawing","building","snap"}[(int)(k.Keycode-Key.Key1)]);GetViewport().SetInputAsHandled();}
             if(k.Keycode==Key.Escape){Cancel();GetViewport().SetInputAsHandled();}
             if(k.Keycode==Key.Enter&&!_looks.Visible){if(_newRoom){if(!_invalid)OpenLooks();}else Commit();GetViewport().SetInputAsHandled();}
             if(k.Keycode==Key.Delete||k.Keycode==Key.Backspace)Delete();
@@ -373,12 +396,13 @@ public partial class RegionEditMock : Control
             var original=start[_selected];
             var targets=_building?BuildingMembers(start):new[]{_selected};
             if(_drag=="lift"&&!original.Stacked)targets=Enumerable.Range(0,start.Count).Where(i=>i==_selected||start[i].Stacked&&start[i].At.DistanceTo(original.At)<.1f).ToArray();
+            var move=_drag=="move"?SnapMove(start,targets,Plane(motion.Position,original.Floor)-_startPlane):Vector2.Zero;
             foreach(var i in targets)
             {
                 var r=start[i];
                 switch(_drag)
                 {
-                    case "move":var delta=Plane(motion.Position,original.Floor)-_startPlane;var at=r.At+delta;if(Math.Abs(at.X-2)<.15f)at.X=2;if(Math.Abs(at.Y)<.15f)at.Y=0;_rooms[i]=r with{At=at};break;
+                    case "move":_rooms[i]=r with{At=r.At+move};break;
                     case "rotate":var a=(now-original.At).Angle()-_startAngle;_rooms[i]=r with{Angle=r.Angle+a,At=_building?original.At+(r.At-original.At).Rotated(a):r.At};break;
                     case "lift":_rooms[i]=r with{Floor=Math.Max(0,r.Floor+(_startPixel.Y-motion.Position.Y)/35)};break;
                     case "height":_rooms[i]=r with{Height=Math.Max(.5f,r.Height+(_startPixel.Y-motion.Position.Y)/35)};break;
@@ -394,7 +418,7 @@ public partial class RegionEditMock : Control
     private void Capture(string name)
     {
         var path=OS.GetEnvironment("REGION_EVIDENCE");if(path.Length==0)path="/tmp/rfg401-region-edit";System.IO.Directory.CreateDirectory(path);GetViewport().GetTexture().GetImage().SavePng(path+"/"+name+".png");
-        System.IO.File.WriteAllText(path+"/"+name+".json",System.Text.Json.JsonSerializer.Serialize(new{scenario=_scenario,size=Size.ToString(),pending=Pending,invalid=_invalid,commitEnabled=!_commit.Disabled,tool=_tool,rooms=_rooms.Select(r=>new{r.Name,r.Floor,r.Height,r.Angle,at=r.At.ToString(),corners=r.Ring.Length}),hits=_hits.Select(h=>new{kind=h.Kind,at=h.Point.ToString()})}));GD.Print("MOCK_CAPTURE "+path+"/"+name+".png");
+        System.IO.File.WriteAllText(path+"/"+name+".json",System.Text.Json.JsonSerializer.Serialize(new{scenario=_scenario,size=Size.ToString(),pending=Pending,invalid=_invalid,commitEnabled=!_commit.Disabled,tool=_tool,snapped=_snap is not null,rooms=_rooms.Select(r=>new{r.Name,r.Floor,r.Height,r.Angle,at=r.At.ToString(),corners=r.Ring.Length}),hits=_hits.Select(h=>new{kind=h.Kind,at=h.Point.ToString()})}));GD.Print("MOCK_CAPTURE "+path+"/"+name+".png");
     }
 }
 public partial class MockOverlay:Control

@@ -33,6 +33,13 @@ side chevrons change foundation thickness and room height. A stacked room has
 its height chevron, planar arrows and rotation handle; it has no independent lift.
 Lifting the demonstrated base wing carries its upper room by the same amount.
 
+Moving near a parallel wall lightly snaps it into contact. Continue sliding along
+the wall or pull away to release. The highlighted edge shows the contact. The
+prototype uses an 8-pixel capture distance and 14-pixel release distance; these
+are tuning values, not approved product constants. It never rotates or raises
+a room automatically, and refuses snaps that would overlap another room.
+A selected Building keeps all its rooms together under the same movement.
+
 Click a wall to reveal an insertion point, then drag that point to add an anchor
 and create a corner. Drag the wall itself to pull the whole wall. The anchor uses
 the application's authored corner handle, including its selected ring.
@@ -62,6 +69,7 @@ The numbered keys load isolated review cases, resetting local history:
 | 5 | New corner created by pulling a wall anchor |
 | 6 | New construction overlapping existing rooms; creation blocked |
 | 7 | Whole-Building movement with a separate neighboring Workshop |
+| 8 | Detached wing; move it toward the hall to try light wall snapping |
 
 These keys are specimen controls, not proposed product shortcuts. The native
 window title identifies the mock. No review harness is added inside the product UI.
@@ -92,7 +100,7 @@ production geometry or physics.
 ## Captures and checks
 
 Pass `-- --state NAME --capture NAME --quit-after-capture` after the Godot options.
-States are `room`, `overlap`, `lift`, `stacked`, `anchor`, `drawing`, `building`.
+States are `room`, `overlap`, `lift`, `stacked`, `anchor`, `drawing`, `building`, `snap`.
 `--long` adds long multilingual room names. F9 captures the current state.
 `REGION_EVIDENCE` selects the absolute output directory, default
 `/tmp/rfg401-region-edit`. Each PNG has a companion JSON state/handle record.
@@ -103,3 +111,10 @@ landscape-phone dimensions; desktop pointer review does not establish physical
 touch usability. The repository's ordinary specimen check remains
 `godot --headless --path . --script res://tests/specimen.gd` after installing the
 pinned UI Kit and importing the root project.
+
+To check the snapping experiment, pass `-- --check-snap` (default room state).
+To measure native drag cost, pass `-- --profile-drag`; add `--profile-height`
+for room-height changes. These standalone diagnostics save JSON in the evidence
+directory and exit. They exercise the mock, not the production regression suite.
+Movement retains the existing room nodes; reshaping uses the production
+RoomShell preview and height shader instead of regenerating collision every frame.
