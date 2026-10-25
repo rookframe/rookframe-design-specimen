@@ -29,9 +29,9 @@ All room geometry and history disappear when the scene closes.
 Select a room through its existing cube marker, or a connected Building through
 its house marker. Drag the cave arrows to move; drag the vertical double arrow
 to lift; drag the cave rotation handle beside the room to rotate. The existing
-chevrons change foundation thickness and room height. The foundation control
-sits on the Region’s outer edge; the height control and its line sit outside
-that edge. A stacked room has
+chevrons change foundation thickness and room height. Both controls share the
+line outside the Region: foundation uses the single lower chevron, and room
+height uses the upper chevron. A stacked room has
 its height chevron, planar arrows and rotation handle; it has no independent lift.
 Lifting the demonstrated base wing carries its upper room by the same amount.
 

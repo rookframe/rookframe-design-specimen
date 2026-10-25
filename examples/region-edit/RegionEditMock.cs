@@ -317,18 +317,18 @@ public partial class RegionEditMock : Control
         source.Free();
         var rotationAt=V(r.At+new Vector2(r.Ring.Max(p=>p.X)+.9f,0).Rotated(r.Angle),r.Floor+.25f);
         var rotate=new Sprite3D{Texture=GD.Load<Texture2D>(Ui+"assets/cavern-rotate.svg"),Position=rotationAt,PixelSize=1.25f/Math.Max(1,Project(rotationAt+_camera.GlobalBasis.X).DistanceTo(Project(rotationAt))),Billboard=BaseMaterial3D.BillboardModeEnum.Enabled,NoDepthTest=true};_handles.AddChild(rotate);_hits.Add((Project(rotationAt),"rotate"));
-        // Match the existing level controls: foundation on the structure's
-        // outer edge, room height on a separate line outside that edge.
+        // Both level controls share the outside line. Reuse the authored
+        // single lower chevron for foundation, and the upper one for height.
         var edge=Polygon(r).MaxBy(p=>Project(V(p,r.Floor)).X);
         var low=Project(V(edge,r.Floor));var high=Project(V(edge,r.Floor+r.Height));
         var offset=new Vector2(38,0);var direction=(high-low).Normalized();
-        _foundation.Position=low;
-        _foundation.GetNode<Polygon2D>("Grip").Position=Vector2.Zero;_foundation.GetNode<Polygon2D>("Grip").Visible=!r.Stacked;
-        _foundation.GetNode<Polygon2D>("UpperGrip").Position=high-low+offset;
-        _foundation.GetNode<Polygon2D>("BottomGrip").Hide();
-        var baseGuide=_foundation.GetNode<FoundationGuide>("Guide");baseGuide.Start=Project(V(edge,r.Floor-r.Base))-low;baseGuide.End=-direction*12;baseGuide.Visible=!r.Stacked&&(baseGuide.End-baseGuide.Start).Dot(direction)>0;
-        var guide=_foundation.GetNode<FoundationGuide>("UpperGuide");guide.Start=offset+direction*8;guide.End=high-low+offset-direction*9;guide.Show();
-        if(!r.Stacked)_hits.Add((low,"foundation"));_hits.Add((high+offset,"height"));
+        _foundation.Position=low+offset;
+        _foundation.GetNode<Polygon2D>("Grip").Hide();
+        _foundation.GetNode<Polygon2D>("UpperGrip").Position=high-low;
+        var foundationGrip=_foundation.GetNode<Polygon2D>("BottomGrip");foundationGrip.Position=Vector2.Zero;foundationGrip.Modulate=Colors.White;foundationGrip.Visible=!r.Stacked;
+        _foundation.GetNode<FoundationGuide>("Guide").Hide();
+        var guide=_foundation.GetNode<FoundationGuide>("UpperGuide");guide.Start=direction*8;guide.End=high-low-direction*9;guide.Show();
+        if(!r.Stacked)_hits.Add((low+offset,"foundation"));_hits.Add((high+offset,"height"));
         if(_wallPoint is{} wall){var point=V(wall,r.Floor+.2f);var dot=new MeshInstance3D{Position=point,Mesh=new SphereMesh{Radius=.1f,Height=.2f},MaterialOverride=new StandardMaterial3D{AlbedoColor=new("e7e7dd"),ShadingMode=BaseMaterial3D.ShadingModeEnum.Unshaded,NoDepthTest=true}};_handles.AddChild(dot);_hits.Add((Project(point),"insert"));}
         if(_anchor>=0&&_anchor<r.Ring.Length){var point=V(Polygon(r)[_anchor],r.Floor+.2f);var p=Project(point);_hits.Add((p,"anchor"));var anchor=GD.Load<PackedScene>(Ui+"RoomCornerHandle.tscn").Instantiate<Node3D>();_handles.AddChild(anchor);anchor.Position=point;anchor.GetNode<Node3D>("Selected").Show();}_feedback.AnchorPoint=null;
         _overlay.QueueRedraw();
