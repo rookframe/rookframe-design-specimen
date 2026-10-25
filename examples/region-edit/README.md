@@ -68,8 +68,9 @@ separation. A taller wall keeps its exposed exterior above the lower ceiling.
 The prototype retains unchanged wall meshes and native handles during dragging.
 
 Click a wall to reveal an insertion point, then drag that point to add an anchor
-and create a corner. Drag the wall itself to pull the whole wall. The anchor uses
-the application's authored corner handle, including its selected ring.
+and create a corner. Drag the wall itself to pull the whole wall. Both the insertion
+point and the pulled anchor use the tunnel knot's white sphere dimensions and
+authored CavePlanVisual handle material. They keep the existing larger hit area.
 
 After any change, the bottom HUD shows Undo, Redo, Delete, Cancel and Commit.
 Undo/Redo step through the pending changes. Delete removes the selected room

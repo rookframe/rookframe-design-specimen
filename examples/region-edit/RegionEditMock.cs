@@ -20,6 +20,7 @@ public partial class RegionEditMock : Control
     private SubViewport _view=null!;
     private Camera3D _camera=null!;
     private Node3D _world=null!,_architecture=null!,_handles=null!;
+    private StandardMaterial3D _anchorMaterial=null!;
     private RegionBrushOverlay _overlay=null!;
     private Node2D _foundation=null!;
     private MockOverlay _feedback=null!;
@@ -84,6 +85,8 @@ public partial class RegionEditMock : Control
         _world=_view.GetNode<Node3D>("PreviewWorld");_world.GetNode<Node3D>("FallbackPresentation").Hide();
         _camera=_world.GetNode<Camera3D>("PreviewCamera");_camera.Projection=Camera3D.ProjectionType.Orthogonal;_camera.Position=new(11,16,20);_camera.LookAt(new(-.2f,1,0));
         _architecture=new Node3D();_handles=new Node3D();_world.AddChild(_architecture);_world.AddChild(_handles);
+        var cave=GD.Load<PackedScene>(Ui+"CavePlanVisual.tscn").Instantiate<CavePlanVisual>();
+        _anchorMaterial=(StandardMaterial3D)cave.HandleMaterial.Duplicate();_anchorMaterial.AlbedoColor=new("e7e7dd");cave.Free();
         _world.AddChild(new MeshInstance3D{Mesh=new PlaneMesh{Size=new(90,90)},Position=new(0,-.22f,0),MaterialOverride=new StandardMaterial3D{AlbedoColor=new("343e3b"),Roughness=1}});
         _overlay=new RegionBrushOverlay{MouseFilter=MouseFilterEnum.Ignore};AddChild(_overlay);_overlay.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         _feedback=new MockOverlay{OwnerMock=this,MouseFilter=MouseFilterEnum.Ignore};AddChild(_feedback);_feedback.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
@@ -379,9 +382,21 @@ public partial class RegionEditMock : Control
         _foundation.GetNode<FoundationGuide>("Guide").Hide();
         var guide=_foundation.GetNode<FoundationGuide>("UpperGuide");guide.Start=direction*8;guide.End=high-low-direction*9;guide.Show();
         if(!r.Stacked)_hits.Add((low+offset,"foundation"));_hits.Add((high+offset,"height"));
-        if(_wallPoint is{} wall){var point=V(wall,r.Floor+.2f);var dot=new MeshInstance3D{Position=point,Name="TransientWallDot",Mesh=new SphereMesh{Radius=.1f,Height=.2f},MaterialOverride=new StandardMaterial3D{AlbedoColor=new("e7e7dd"),ShadingMode=BaseMaterial3D.ShadingModeEnum.Unshaded,NoDepthTest=true}};_handles.AddChild(dot);_hits.Add((Project(point),"insert"));}
-        if(_anchor>=0&&_anchor<r.Ring.Length){var point=V(Polygon(r)[_anchor],r.Floor+.2f);var p=Project(point);_hits.Add((p,"anchor"));var anchor=GD.Load<PackedScene>(Ui+"RoomCornerHandle.tscn").Instantiate<Node3D>();anchor.Name="TransientCorner";_handles.AddChild(anchor);anchor.Position=point;anchor.GetNode<Node3D>("Selected").Show();}_feedback.AnchorPoint=null;
+        if(_wallPoint is{} wall)AnchorDot("WallInsertionDot",V(wall,r.Floor+.2f),"insert");
+        if(_anchor>=0&&_anchor<r.Ring.Length)AnchorDot("WallAnchorDot",V(Polygon(r)[_anchor],r.Floor+.2f),"anchor");
         _overlay.QueueRedraw();
+    }
+    private void AnchorDot(string name,Vector3 point,string action)
+    {
+        var dot=_handles.GetNodeOrNull<MeshInstance3D>(name);
+        if(dot is null)
+        {
+            // Match CavePlanVisual's tunnel knots: the same native sphere
+            // dimensions and authored, unshaded handle material.
+            dot=new MeshInstance3D{Name=name,Mesh=new SphereMesh{Radius=.1f,Height=.2f},MaterialOverride=_anchorMaterial,CastShadow=GeometryInstance3D.ShadowCastingSetting.Off};
+            _handles.AddChild(dot);
+        }
+        dot.Position=point;dot.Show();_hits.Add((Project(point),action));
     }
     private Node3D Arrow(string name,Vector3 axis,bool doubleEnded)
     {
@@ -490,11 +505,9 @@ public partial class RegionEditMock : Control
 public partial class MockOverlay:Control
 {
     internal RegionEditMock OwnerMock=null!;
-    internal Vector2? AnchorPoint;
     public override void _Draw()
     {
         foreach(var poly in OwnerMock.Overlaps){DrawColoredPolygon(poly,new(1,.16f,.1f,.55f));DrawPolyline([..poly,poly[0]],new(1,.3f,.2f),2,true);}
         OwnerMock.DrawRotationGuides(this);
-        if(AnchorPoint is{} p){DrawCircle(p,8,new("e8d7a8"));DrawArc(p,11,0,Mathf.Tau,32,new("1c282c"),2,true);}
     }
 }
