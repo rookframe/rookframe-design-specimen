@@ -24,8 +24,10 @@ public partial class RegionEditMock : Control
     private Node2D _foundation=null!;
     private MockOverlay _feedback=null!;
     private readonly List<Room> _rooms=[];
-    private sealed record RoomVisual(Node3D Root,Room State,RoomDraft Plan,RoomShell Shell,MeshInstance3D Caps,ShaderMaterial Ceiling,ShaderMaterial[] Walls);
+    private sealed record RoomVisual(Node3D Root,Room State,RoomDraft Plan,RoomShell Shell,MeshInstance3D Caps,ShaderMaterial Ceiling,ShaderMaterial[] Walls,Dictionary<int,DecorationChunk> Chunks,Dictionary<(ulong,bool),ShaderMaterial> Materials);
+    private sealed record DecorationChunk(RoomDecorationModule[] Modules,ArrayMesh? Mesh);
     private readonly Dictionary<Guid,RoomVisual> _roomVisuals=[];
+    private RoomSharedWallTopology? _wallTopology;
     private List<Room>? _before;
     private readonly Stack<List<Room>> _undo=[],_redo=[],_worldUndo=[],_worldRedo=[];
     private readonly List<(Vector2 Point,string Kind)> _hits=[];
@@ -65,10 +67,12 @@ public partial class RegionEditMock : Control
         var args=OS.GetCmdlineUserArgs();
         _longNames=args.Contains("--long");
         var state=Array.IndexOf(args,"--state");Reset(state>=0?args[state+1]:"room");
+        if(args.Contains("--inspect-walls")){_roofHidden=false;_cutaway=false;_camera.Position=new(-11,10,18);_camera.LookAt(new(0,2,0));Rebuild();}
         Callable.From(Arrange).CallDeferred();
         if(args.Contains("--capture"))CaptureLater(args);
         if(args.Contains("--profile-drag"))ProfileDrag();
         if(args.Contains("--check-snap"))CheckSnap();
+        if(args.Contains("--check-joins"))CheckJoins();
     }
     private void BuildStage()
     {
@@ -156,6 +160,7 @@ public partial class RegionEditMock : Control
         if(state=="stacked")_selected=2;
         if(state=="anchor"){Remember();_anchor=2;_rooms[1]=Current with{Ring=[new(-2,-2),new(2,-2),new(3,0),new(2,2),new(-2,2)]};}
         if(state=="drawing"){_tool="draw";Remember();_newRoom=true;_rooms.Add(new("New room",new(-.5f,3),Rectangle(4,3)));_selected=2;}
+        if(state=="joins"){_rooms[1]=Current with{At=new(2,.3937618f),Height=5.028571f};_roofHidden=false;}
         if(state=="snap")_rooms[1]=Current with{At=new(3.1f,.45f)};
         if(state=="building"){_building=true;_rooms.Add(new("Workshop",new(-5,-6.5f),Rectangle(3,3)));}
         if(_longNames)for(int i=0;i<_rooms.Count;i++)_rooms[i]=_rooms[i] with{Name=_rooms[i].Name+" — Northern observatory / Северная галерея / 北の展望室"};
@@ -163,14 +168,16 @@ public partial class RegionEditMock : Control
     }
     private void Rebuild()
     {
+        var plans=_rooms.ToDictionary(r=>r.VisualId,r=>Plan(r));
+        var topology=RoomSharedWallTopology.From(plans.Select(p=>(p.Key.ToString(),p.Value)));
         foreach(var key in _roomVisuals.Keys.Where(k=>!_rooms.Any(r=>r.VisualId==k)).ToArray())
         {var old=_roomVisuals[key];_architecture.RemoveChild(old.Root);old.Root.QueueFree();_roomVisuals.Remove(key);}
         foreach(var r in _rooms)
         {
-            if(!_roomVisuals.TryGetValue(r.VisualId,out var visual)||!SameShell(visual.State,r))
+            if(!_roomVisuals.TryGetValue(r.VisualId,out var visual)||!SameShell(visual.State,r)||!SameContacts(topology,r.VisualId.ToString()))
             {
                 if(visual is not null){_architecture.RemoveChild(visual.Root);visual.Root.QueueFree();}
-                visual=BuildRoom(r,visual is not null&&visual.State.Look==r.Look&&visual.State.Appearance==r.Appearance?visual:null);
+                visual=BuildRoom(r,plans[r.VisualId],topology,visual is not null&&visual.State.Look==r.Look&&visual.State.Appearance==r.Appearance?visual:null);
             }
             visual.Root.Position=V(r.At,r.Floor);visual.Root.Rotation=new(0,-r.Angle,0);
             visual.Ceiling.SetShaderParameter("group_visibility",_roofHidden?0f:1f);
@@ -178,26 +185,67 @@ public partial class RegionEditMock : Control
             visual.Caps.Visible=_cutaway;
             if(visual.State.Angle!=r.Angle||visual.Caps.Mesh is null)
             {visual.Shell.Cutaway.Update(visual.Root.Basis,_camera.GlobalBasis.Z,null);visual.Caps.Mesh=visual.Shell.Cutaway.Caps();}
-            _roomVisuals[r.VisualId]=visual with{State=r};
+            _roomVisuals[r.VisualId]=visual with{State=r,Plan=plans[r.VisualId]};
         }
+        _wallTopology=topology;
         Present();
     }
+    private bool SameContacts(RoomSharedWallTopology next,string id)
+    {
+        if(_wallTopology is null)return false;
+        string[] contacts(RoomSharedWallTopology topology)=>topology.Spans
+            .Where(s=>s.FirstRegionId==id||s.SecondRegionId==id).Select(s=>
+            {
+                var first=s.FirstRegionId==id;var other=first?s.SecondRegionId:s.FirstRegionId;
+                var plan=topology.Plans[other];
+                float q(float n)=>Mathf.Snapped(n,.0001f);
+                return $"{other}:{(first?s.FirstBoundary:s.SecondBoundary)}:{(first?s.FirstSpan:s.SecondSpan)}:{q(first?s.FirstStart:s.SecondStart)}:{q(first?s.FirstEnd:s.SecondEnd)}:{q((float)plan.UpperOffset+plan.Transform.Origin.Y)}";
+            }).Order().ToArray();
+        return contacts(_wallTopology).SequenceEqual(contacts(next));
+    }
     private static bool SameShell(Room a,Room b)=>a.Height==b.Height&&a.Base==b.Base&&a.Look==b.Look&&a.Appearance==b.Appearance&&a.Ring.SequenceEqual(b.Ring);
-    private RoomVisual BuildRoom(Room r,RoomVisual? previous=null)
+    private RoomDraft Plan(Room r)
     {
         var anchors=r.Ring.Select((p,i)=>new ContourAnchor("a"+i,p)).ToArray();
         var contour=new MixedContour(anchors,anchors.Select((a,i)=>new ContourSpan("w"+i,a.Id,anchors[(i+1)%anchors.Length].Id)).ToArray());
         var look=r.Appearance??Look(r.Look);
-        var plan=look.Apply(new RoomDraft(Transform3D.Identity,new(-2,-2,4,4),look.Wall!,look.Floor!,look.Ceiling!,.18,0,r.Height,Contour:contour,FoundationThickness:r.Base,Foundation:look.Foundation!));
-        var shell=previous is null?RoomShell.Build(plan,Content):RoomShell.Preview(plan,previous.Plan,previous.Shell,Content,RoomSharedWallTopology.From(new[]{(r.Name,plan)}),r.Name,previous.Shell);
+        return look.Apply(new RoomDraft(new Transform3D(new Basis(Vector3.Up,-r.Angle),V(r.At,r.Floor)),new(-2,-2,4,4),look.Wall!,look.Floor!,look.Ceiling!,.18,0,r.Height,Contour:contour,FoundationThickness:r.Base,Foundation:look.Foundation!));
+    }
+    private RoomVisual BuildRoom(Room r,RoomDraft plan,RoomSharedWallTopology topology,RoomVisual? previous=null)
+    {
+        var id=r.VisualId.ToString();
+        var shell=previous is null?RoomShell.Build(plan,Content,topology,id):RoomShell.Preview(plan,previous.Plan,previous.Shell,Content,topology,id,previous.Shell);
         var root=new Node3D{Position=V(r.At,r.Floor),Rotation=new(0,-r.Angle,0)};_architecture.AddChild(root);
-        var structure=new MeshInstance3D{Mesh=shell.Mesh};var decor=new MeshInstance3D{Mesh=shell.Decoration??RoomDecoration.Combine(shell.Decorations)};root.AddChild(structure);root.AddChild(decor);
+        var structure=new MeshInstance3D{Mesh=shell.Mesh};root.AddChild(structure);
+        var chunks=new Dictionary<int,DecorationChunk>();var decorationNodes=new List<MeshInstance3D>();
+        foreach(var group in shell.Decorations.SelectMany(d=>d.Modules.Values).GroupBy(m=>m.CutawaySlot))
+        {
+            var modules=group.ToArray();
+            var chunk=previous?.Chunks.GetValueOrDefault(group.Key);
+            if(chunk is null||!chunk.Modules.SequenceEqual(modules))
+            {
+                var parts=shell.Decorations.Select(d=>d with{Modules=d.Modules.Where(m=>m.Value.CutawaySlot==group.Key).ToDictionary()});
+                chunk=new(modules,RoomDecoration.Combine(parts));
+            }
+            chunks.Add(group.Key,chunk);
+            if(chunk.Mesh is not null){var decor=new MeshInstance3D{Mesh=chunk.Mesh};root.AddChild(decor);decorationNodes.Add(decor);}
+        }
         var ceiling=InteriorRevealMaterial.Create((BaseMaterial3D)shell.Mesh.SurfaceGetMaterial(1),groupOnly:true);ceiling.SetShaderParameter("group_visibility",_roofHidden?0f:1f);structure.SetSurfaceOverrideMaterial(1,ceiling);
-        var walls=new List<ShaderMaterial>();
-        void bind(MeshInstance3D mesh,int index){var m=InteriorRevealMaterial.Create((BaseMaterial3D)mesh.Mesh.SurfaceGetMaterial(index));m.SetShaderParameter("cutaway_ranges",shell.Cutaway.Texture);m.SetShaderParameter("cutaway_floor",0f);m.SetShaderParameter("cutaway_slope",RoomCutaway.Slope);m.SetShaderParameter("context_cutaway",_cutaway?1f:0f);mesh.SetSurfaceOverrideMaterial(index,m);walls.Add(m);}
-        if(shell.HeightPreview is{} height&&decor.Mesh is not null){var bounds=decor.Mesh.GetAabb();var shift=Vector3.Up*(float)(plan.UpperOffset-height.Plan.UpperOffset);decor.CustomAabb=bounds.Merge(new Aabb(bounds.Position+shift,bounds.Size));}
-        bind(structure,2);for(int i=4;i<shell.Mesh.GetSurfaceCount();i++)bind(structure,i);for(int i=0;i<(decor.Mesh?.GetSurfaceCount()??0);i++){bind(decor,i);var m=walls[^1];m.SetShaderParameter("preview_height",shell.HeightPreview is not null);m.SetShaderParameter("preview_upper",(float)plan.UpperOffset);m.SetShaderParameter("preview_top_shift",(float)(plan.UpperOffset-(shell.HeightPreview?.Plan.UpperOffset??plan.UpperOffset)));}
-        shell.Cutaway.Update(root.Basis,_camera.GlobalBasis.Z,null);var caps=new MeshInstance3D{Mesh=shell.Cutaway.Caps()};root.AddChild(caps);return new(root,r,plan,shell,caps,ceiling,walls.ToArray());
+        var walls=new List<ShaderMaterial>();var materials=new Dictionary<(ulong,bool),ShaderMaterial>();
+        void bind(MeshInstance3D mesh,int index,bool decoration=false)
+        {
+            var source=(BaseMaterial3D)mesh.Mesh.SurfaceGetMaterial(index);var key=(source.GetInstanceId(),decoration);
+            if(!materials.TryGetValue(key,out var m))
+            {
+                m=previous?.Materials.GetValueOrDefault(key)??InteriorRevealMaterial.Create(source);
+                m.SetShaderParameter("cutaway_ranges",shell.Cutaway.Texture);m.SetShaderParameter("cutaway_floor",0f);m.SetShaderParameter("cutaway_slope",RoomCutaway.Slope);m.SetShaderParameter("context_cutaway",_cutaway?1f:0f);
+                materials[key]=m;
+            }
+            mesh.SetSurfaceOverrideMaterial(index,m);walls.Add(m);
+        }
+        foreach(var decor in decorationNodes)if(shell.HeightPreview is{} height){var bounds=decor.Mesh.GetAabb();var shift=Vector3.Up*(float)(plan.UpperOffset-height.Plan.UpperOffset);decor.CustomAabb=bounds.Merge(new Aabb(bounds.Position+shift,bounds.Size));}
+        bind(structure,2);for(int i=4;i<shell.Mesh.GetSurfaceCount();i++)bind(structure,i);foreach(var decor in decorationNodes)for(int i=0;i<decor.Mesh.GetSurfaceCount();i++){bind(decor,i,true);var m=walls[^1];m.SetShaderParameter("preview_height",shell.HeightPreview is not null);m.SetShaderParameter("preview_upper",(float)plan.UpperOffset);m.SetShaderParameter("preview_top_shift",(float)(plan.UpperOffset-(shell.HeightPreview?.Plan.UpperOffset??plan.UpperOffset)));}
+        shell.Cutaway.Update(root.Basis,_camera.GlobalBasis.Z,null);var caps=new MeshInstance3D{Mesh=shell.Cutaway.Caps()};root.AddChild(caps);return new(root,r,plan,shell,caps,ceiling,walls.Distinct().ToArray(),chunks,materials);
     }
     private bool Collision(Room a,Room b)=>Math.Min(a.Floor+a.Height,b.Floor+b.Height)-Math.Max(a.Floor,b.Floor)>.03f&&Geometry2D.IntersectPolygons(Polygon(a),Polygon(b)).Any(p=>Area(p)>.005f);
     private static float Area(Vector2[] p)=>Math.Abs(Enumerable.Range(0,p.Length).Sum(i=>p[i].Cross(p[(i+1)%p.Length])))/2;
@@ -273,6 +321,8 @@ public partial class RegionEditMock : Control
         float edge=_left.GetThemeConstant("inset"),top=_left.GetThemeConstant("top"),sep=_left.GetThemeConstant("separation");
         _left.Position=new(edge,top);_right.Position=new(Size.X-edge-_right.Size.X,top);_rail.Position=new(_right.Position.X-_rail.Size.X-sep,top);
         _camera.Size=compact?(_rooms.Any(r=>r.Stacked)?19:13.5f):18;_camera.Position=new(11,16,20);_camera.LookAt(new(-.2f,1,0));
+        if(OS.GetCmdlineUserArgs().Contains("--inspect-walls")){_camera.Position=new(-11,10,18);_camera.LookAt(new(0,2,0));}
+        if(OS.GetCmdlineUserArgs().Contains("--inspect-join")){var target=new Vector3(0,2.8f,2.3937618f);_camera.Size=4;_camera.Position=target+new Vector3(11,16,20);_camera.LookAt(target);}
         _rootHud.SetEditingHeight(compact?68:104);_paint.LayoutFor(compact?68:104);
         // The proposal uses the existing HUD surface and icon sizes at both breakpoints.
         foreach(var b in _editHud.FindChildren("*","Button",true,false).OfType<Button>())b.CustomMinimumSize=Vector2.One*(compact?44:64);
@@ -287,7 +337,8 @@ public partial class RegionEditMock : Control
     }
     private void Controls()
     {
-        _hits.Clear();_overlay.ContactEdges.Clear();_overlay.Markers.Clear();_overlay.Outlines.Clear();foreach(var n in _handles.GetChildren()){_handles.RemoveChild(n);n.QueueFree();}
+        foreach(var n in _handles.GetChildren().OfType<Node3D>().Where(n=>n.Name.ToString().StartsWith("Transient"))){_handles.RemoveChild(n);n.QueueFree();}
+        _hits.Clear();_overlay.ContactEdges.Clear();_overlay.Markers.Clear();_overlay.Outlines.Clear();foreach(var n in _handles.GetChildren().OfType<Node3D>())n.Hide();
         bool active=_builder&&_tool==""&&_rooms.Count>0&&!_looks.Visible;
         _foundation.Visible=active;
         if(!active){_overlay.QueueRedraw();return;}
@@ -308,15 +359,13 @@ public partial class RegionEditMock : Control
         var r=Current;
         foreach(var room in _building?BuildingMembers(_rooms).Select(i=>_rooms[i]):new[]{r})_overlay.Outlines.Add((Polygon(room).Select(p=>Project(V(p,room.Floor+.03f))).ToArray(),true));
         var at=V(r.At,r.Floor+.12f);
-        var source=new CavePlanVisual{HandleMaterial=new StandardMaterial3D{AlbedoColor=new("e3d2a3"),ShadingMode=BaseMaterial3D.ShadingModeEnum.Unshaded,NoDepthTest=true}};
         foreach(var axis in new[]{Vector3.Left,Vector3.Right,Vector3.Forward,Vector3.Back})
         {
-            var arrow=source.MockArrow(axis,false);arrow.Position=at+axis*1.05f;OrientArrow(arrow,axis);_handles.AddChild(arrow);_hits.Add((Project(arrow.Position),"move"));
+            var arrow=Arrow("Move"+Array.IndexOf(new[]{Vector3.Left,Vector3.Right,Vector3.Forward,Vector3.Back},axis),axis,false);arrow.Position=at+axis*1.05f;OrientArrow(arrow,axis);_hits.Add((Project(arrow.Position),"move"));
         }
-        if(!r.Stacked){var lift=source.MockArrow(Vector3.Up,true);lift.Position=at+Vector3.Up*1.65f;OrientArrow(lift,Vector3.Up);_handles.AddChild(lift);_hits.Add((Project(lift.Position),"lift"));}
-        source.Free();
+        if(!r.Stacked){var lift=Arrow("Lift",Vector3.Up,true);lift.Position=at+Vector3.Up*1.65f;OrientArrow(lift,Vector3.Up);_hits.Add((Project(lift.Position),"lift"));}
         var rotationAt=V(r.At+new Vector2(r.Ring.Max(p=>p.X)+.9f,0).Rotated(r.Angle),r.Floor+.25f);
-        var rotate=new Sprite3D{Texture=GD.Load<Texture2D>(Ui+"assets/cavern-rotate.svg"),Position=rotationAt,PixelSize=1.25f/Math.Max(1,Project(rotationAt+_camera.GlobalBasis.X).DistanceTo(Project(rotationAt))),Billboard=BaseMaterial3D.BillboardModeEnum.Enabled,NoDepthTest=true};_handles.AddChild(rotate);_hits.Add((Project(rotationAt),"rotate"));
+        var rotate=_handles.GetNodeOrNull<Sprite3D>("Rotate");if(rotate is null){rotate=new Sprite3D{Name="Rotate",Texture=GD.Load<Texture2D>(Ui+"assets/cavern-rotate.svg"),Position=rotationAt,PixelSize=1.25f/Math.Max(1,Project(rotationAt+_camera.GlobalBasis.X).DistanceTo(Project(rotationAt))),Billboard=BaseMaterial3D.BillboardModeEnum.Enabled,NoDepthTest=true};_handles.AddChild(rotate);}rotate.Show();rotate.Position=rotationAt;rotate.PixelSize=1.25f/Math.Max(1,Project(rotationAt+_camera.GlobalBasis.X).DistanceTo(Project(rotationAt)));_hits.Add((Project(rotationAt),"rotate"));
         // Both level controls share the outside line. Reuse the authored
         // single lower chevron for foundation, and the upper one for height.
         var edge=Polygon(r).MaxBy(p=>Project(V(p,r.Floor)).X);
@@ -329,9 +378,19 @@ public partial class RegionEditMock : Control
         _foundation.GetNode<FoundationGuide>("Guide").Hide();
         var guide=_foundation.GetNode<FoundationGuide>("UpperGuide");guide.Start=direction*8;guide.End=high-low-direction*9;guide.Show();
         if(!r.Stacked)_hits.Add((low+offset,"foundation"));_hits.Add((high+offset,"height"));
-        if(_wallPoint is{} wall){var point=V(wall,r.Floor+.2f);var dot=new MeshInstance3D{Position=point,Mesh=new SphereMesh{Radius=.1f,Height=.2f},MaterialOverride=new StandardMaterial3D{AlbedoColor=new("e7e7dd"),ShadingMode=BaseMaterial3D.ShadingModeEnum.Unshaded,NoDepthTest=true}};_handles.AddChild(dot);_hits.Add((Project(point),"insert"));}
-        if(_anchor>=0&&_anchor<r.Ring.Length){var point=V(Polygon(r)[_anchor],r.Floor+.2f);var p=Project(point);_hits.Add((p,"anchor"));var anchor=GD.Load<PackedScene>(Ui+"RoomCornerHandle.tscn").Instantiate<Node3D>();_handles.AddChild(anchor);anchor.Position=point;anchor.GetNode<Node3D>("Selected").Show();}_feedback.AnchorPoint=null;
+        if(_wallPoint is{} wall){var point=V(wall,r.Floor+.2f);var dot=new MeshInstance3D{Position=point,Name="TransientWallDot",Mesh=new SphereMesh{Radius=.1f,Height=.2f},MaterialOverride=new StandardMaterial3D{AlbedoColor=new("e7e7dd"),ShadingMode=BaseMaterial3D.ShadingModeEnum.Unshaded,NoDepthTest=true}};_handles.AddChild(dot);_hits.Add((Project(point),"insert"));}
+        if(_anchor>=0&&_anchor<r.Ring.Length){var point=V(Polygon(r)[_anchor],r.Floor+.2f);var p=Project(point);_hits.Add((p,"anchor"));var anchor=GD.Load<PackedScene>(Ui+"RoomCornerHandle.tscn").Instantiate<Node3D>();anchor.Name="TransientCorner";_handles.AddChild(anchor);anchor.Position=point;anchor.GetNode<Node3D>("Selected").Show();}_feedback.AnchorPoint=null;
         _overlay.QueueRedraw();
+    }
+    private Node3D Arrow(string name,Vector3 axis,bool doubleEnded)
+    {
+        var arrow=_handles.GetNodeOrNull<Node3D>(name);
+        if(arrow is null)
+        {
+            var source=new CavePlanVisual{HandleMaterial=new StandardMaterial3D{AlbedoColor=new("e3d2a3"),ShadingMode=BaseMaterial3D.ShadingModeEnum.Unshaded,NoDepthTest=true}};
+            arrow=source.MockArrow(axis,doubleEnded);arrow.Name=name;_handles.AddChild(arrow);source.Free();
+        }
+        arrow.Show();return arrow;
     }
     private void OrientArrow(Node3D arrow,Vector3 direction)
     {

@@ -20,7 +20,11 @@ uses `~/Projects/rookframe-*` or fetches those repositories from GitHub.
 `sources.json` pins the exact application, UI Kit and SDK commits. `prepare.py`
 exports those commits into ignored `.region-edit-runtime`, hydrates their LFS
 assets and adds only the specimen scene/adapters. Production source and assets
-remain unchanged. The temporary C# project excludes production test compilation.
+remain byte-exact to those pins. The source archive also contains
+`application-fix.bundle` for the unpublished renderer correction; bootstrap
+imports its Git objects when that pinned application commit is missing, without
+changing the source repository's checkout. Keep the bundle with the example.
+The temporary C# project excludes production test compilation.
 No World, package installation, credentials, networking or persistence runs here.
 All room geometry and history disappear when the scene closes.
 
@@ -41,6 +45,11 @@ prototype uses an 8-pixel capture distance and 14-pixel release distance; these
 are tuning values, not approved product constants. It never rotates or raises
 a room automatically, and refuses snaps that would overlap another room.
 A selected Building keeps all its rooms together under the same movement.
+
+Joined rooms use one shared-wall calculation. Both affected rooms refresh when
+contact changes: exterior timber is removed from the divider and restored on
+separation. A taller wall keeps its exposed exterior above the lower ceiling.
+The prototype retains unchanged wall meshes and native handles during dragging.
 
 Click a wall to reveal an insertion point, then drag that point to add an anchor
 and create a corner. Drag the wall itself to pull the whole wall. The anchor uses
@@ -102,7 +111,10 @@ production geometry or physics.
 ## Captures and checks
 
 Pass `-- --state NAME --capture NAME --quit-after-capture` after the Godot options.
-States are `room`, `overlap`, `lift`, `stacked`, `anchor`, `drawing`, `building`, `snap`.
+States are `room`, `overlap`, `lift`, `stacked`, `anchor`, `drawing`, `building`,
+`snap` and `joins`. The last reproduces the reported shorter-hall/taller-wing join
+with ceilings visible. `--inspect-join` focuses the camera on that junction;
+`--inspect-walls` shows it from outside with cutaway disabled.
 `--long` adds long multilingual room names. F9 captures the current state.
 `REGION_EVIDENCE` selects the absolute output directory, default
 `/tmp/rfg401-region-edit`. Each PNG has a companion JSON state/handle record.
@@ -115,8 +127,15 @@ touch usability. The repository's ordinary specimen check remains
 pinned UI Kit and importing the root project.
 
 To check the snapping experiment, pass `-- --check-snap` (default room state).
+`-- --check-joins` checks the actual retained visuals for duplicate exterior
+trim, exposed upper detail, separation/rejoining and both height-preview cases.
+These disposable checks apply to the demonstrated aligned-floor assembly;
+they do not establish production collision, arbitrary floor-level joins or Portals.
 To measure native drag cost, pass `-- --profile-drag`; add `--profile-height`
 for room-height changes. These standalone diagnostics save JSON in the evidence
 directory and exit. They exercise the mock, not the production regression suite.
-Movement retains the existing room nodes; reshaping uses the production
-RoomShell preview and height shader instead of regenerating collision every frame.
+Movement retains room nodes while their local geometry is unchanged. Contact
+changes use RoomShell preview, retaining unchanged decoration meshes by wall.
+Height editing uses the production height preview where clipping permits it.
+The diagnostics retain the original 8 ms update / 34 ms frame targets; a failing
+update target must be reported separately from observed frame responsiveness.

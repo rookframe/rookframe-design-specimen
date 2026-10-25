@@ -21,6 +21,15 @@ def repository(name):
     return candidate
 
 def export(repo, commit, destination, subtree=None):
+    present = subprocess.run(['git', '-C', str(repo), 'cat-file', '-e', commit + '^{commit}'],
+                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0
+    bundle = HERE / 'application-fix.bundle'
+    if not present and commit == PINS['application'] and bundle.is_file():
+        # Source archives carry the unpublished renderer fix as a verified Git
+        # bundle. It imports objects into the source cache without changing its checkout.
+        subprocess.run(['git', '-C', str(repo), 'bundle', 'verify', str(bundle)], check=True)
+        subprocess.run(['git', '-C', str(repo), 'fetch', str(bundle),
+                        'refs/heads/codex/rfg-401-wall-joins'], check=True)
     args = ['git', '-C', str(repo), 'archive', commit]
     if subtree:
         args.append(subtree)
