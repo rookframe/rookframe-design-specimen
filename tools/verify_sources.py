@@ -17,7 +17,12 @@ assert installed == pin[1], "Reinstall the declared UI Kit revision with gd-plug
 count = 0
 for directory in ("examples", "tests"):
     for path in (ROOT / directory).rglob("*"):
-        if path.suffix not in {".gd", ".tscn"} or "exact-commit-consumer" in path.parts:
+        if path.suffix not in {".gd", ".tscn"}:
+            continue
+        # Standalone examples resolve res:// within their own prepared project,
+        # not this laboratory's resource root.
+        if any((parent / "project.godot").is_file() for parent in path.parents
+               if parent != ROOT and ROOT in parent.parents):
             continue
         for resource in re.findall(r'"res://([^"%]+\.(?:gd|tscn|tres|svg|png))"', path.read_text(encoding="utf-8")):
             assert (ROOT / resource).is_file(), f"Missing {resource} in {path.relative_to(ROOT)}"
