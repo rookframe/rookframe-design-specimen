@@ -84,4 +84,3 @@ for f in HERE.iterdir():
     if f.suffix in ('.cs', '.tscn', '.gd', '.tres'):
         shutil.copyfile(f, target / f.name)
 print(project)
-
